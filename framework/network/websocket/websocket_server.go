@@ -210,8 +210,8 @@ func (ws *WebSocketServer) parseFrames(data []byte, wsConn *WebSocketConn) ([][]
 		}
 
 		// 解析帧头
-		fin := (buf[0] & 0x80) != 0
-		opcode := buf[0] & 0x0F
+		//fin := (buf[0] & 0x80) != 0
+		//opcode := buf[0] & 0x0F
 		masked := (buf[1] & 0x80) != 0
 		payloadLen := int(buf[1] & 0x7F)
 

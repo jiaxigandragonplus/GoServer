@@ -82,7 +82,7 @@ func (wc *WebSocketClient) Connect() error {
 	}
 
 	// 启动接收循环
-	go wc.ReceiveLoop()
+	go wc.receiveLoop()
 
 	log.Printf("Connected to WebSocket server at %s", wc.addr)
 	return nil
@@ -262,7 +262,7 @@ func (wc *WebSocketClient) IsConnected() bool {
 }
 
 // receiveLoop 接收循环（在单独的 goroutine 中运行）
-func (wc *WebSocketClient) ReceiveLoop() {
+func (wc *WebSocketClient) receiveLoop() {
 	if wc.conn == nil {
 		return
 	}

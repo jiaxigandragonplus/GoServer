@@ -33,9 +33,6 @@ func TestWebsocketClient(t *testing.T) {
 		log.Fatalf("Failed to connect: %v", err)
 	}
 
-	// 启动接收循环（在单独的 goroutine 中）
-	go client.ReceiveLoop()
-
 	// 发送一些测试消息
 	time.Sleep(1 * time.Second)
 

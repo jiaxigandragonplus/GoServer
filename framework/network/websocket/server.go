@@ -30,7 +30,7 @@ const (
 
 // WebSocketConn 表示一个 WebSocket 连接
 type WebSocketConn struct {
-	c          net.Conn
+	conn       interface{} // 可以是 gnet.Conn 或 net.Conn
 	isServer   bool
 	buffer     []byte
 	bufferSize int
@@ -99,8 +99,19 @@ func (ws *WebSocketServer) OnTraffic(c gnet.Conn) gnet.Action {
 
 	data := buf.Bytes()[:n]
 
+	// 调试：打印接收到的数据的前几个字节
+	if len(data) > 0 {
+		// 简单的 min 函数实现
+		printLen := 10
+		if len(data) < printLen {
+			printLen = len(data)
+		}
+		log.Printf("Received %d bytes from %s, first bytes: %v", n, c.RemoteAddr().String(), data[:printLen])
+	}
+
 	// 检查是否是 HTTP 请求（握手阶段）
 	if bytes.HasPrefix(data, []byte("GET ")) {
+		log.Printf("Handshake request detected from %s", c.RemoteAddr().String())
 		// 处理 WebSocket 握手
 		response, err := ws.handleHandshake(data)
 		if err != nil {
@@ -116,19 +127,19 @@ func (ws *WebSocketServer) OnTraffic(c gnet.Conn) gnet.Action {
 
 		// 创建 WebSocket 连接对象并存储到连接上下文
 		wsConn := &WebSocketConn{
-			c:        c,
+			conn:     c,
 			isServer: true,
 		}
 		c.SetContext(wsConn)
 
-		log.Printf("WebSocket handshake completed for %s", c.RemoteAddr().String())
+		log.Printf("WebSocket handshake completed for %s, context set", c.RemoteAddr().String())
 		return gnet.None
 	}
 
 	// 获取 WebSocket 连接对象
 	wsConn, ok := c.Context().(*WebSocketConn)
 	if !ok {
-		log.Printf("Connection context is not WebSocketConn")
+		log.Printf("Connection context is not WebSocketConn for %s, context type: %T", c.RemoteAddr().String(), c.Context())
 		return gnet.Close
 	}
 
@@ -315,24 +326,39 @@ func (ws *WebSocketServer) handleFrame(wsConn *WebSocketConn, frame []byte) gnet
 	case OpCodeText:
 		log.Printf("Received text message: %s", string(payload))
 		// 回显消息
-		err := ws.sendText(wsConn.c, payload)
-		if err != nil {
-			log.Printf("Send text error: %v", err)
+		if conn, ok := wsConn.conn.(gnet.Conn); ok {
+			err := ws.sendText(conn, payload)
+			if err != nil {
+				log.Printf("Send text error: %v", err)
+				return gnet.Close
+			}
+		} else {
+			log.Printf("Error: connection is not gnet.Conn")
 			return gnet.Close
 		}
 	case OpCodeBinary:
 		log.Printf("Received binary message, length: %d", len(payload))
 		// 回显二进制消息
-		err := ws.sendBinary(wsConn.c, payload)
-		if err != nil {
-			log.Printf("Send binary error: %v", err)
+		if conn, ok := wsConn.conn.(gnet.Conn); ok {
+			err := ws.sendBinary(conn, payload)
+			if err != nil {
+				log.Printf("Send binary error: %v", err)
+				return gnet.Close
+			}
+		} else {
+			log.Printf("Error: connection is not gnet.Conn")
 			return gnet.Close
 		}
 	case OpCodePing:
 		log.Println("Received ping, sending pong")
-		err := ws.sendPong(wsConn.c, payload)
-		if err != nil {
-			log.Printf("Send pong error: %v", err)
+		if conn, ok := wsConn.conn.(gnet.Conn); ok {
+			err := ws.sendPong(conn, payload)
+			if err != nil {
+				log.Printf("Send pong error: %v", err)
+				return gnet.Close
+			}
+		} else {
+			log.Printf("Error: connection is not gnet.Conn")
 			return gnet.Close
 		}
 	case OpCodePong:

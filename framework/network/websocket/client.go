@@ -68,7 +68,7 @@ func (wc *WebSocketClient) Connect() error {
 
 	// 创建 WebSocket 连接对象
 	wc.conn = &WebSocketConn{
-		c:         conn,
+		conn:      conn,
 		isServer:  false,
 		onMessage: func([]byte) {}, // 默认空实现
 		onClose:   func() {},       // 默认空实现
@@ -205,8 +205,12 @@ func (wc *WebSocketClient) sendFrame(opcode byte, payload []byte) error {
 	// 合并头部和掩码后的有效载荷
 	frame := append(header, maskedPayload...)
 
-	_, err := wc.conn.c.Write(frame)
-	return err
+	// 类型断言获取 net.Conn
+	if conn, ok := wc.conn.conn.(net.Conn); ok {
+		_, err := conn.Write(frame)
+		return err
+	}
+	return fmt.Errorf("connection is not net.Conn")
 }
 
 // Ping 发送 Ping 消息
@@ -236,7 +240,11 @@ func (wc *WebSocketClient) Close() error {
 	}
 
 	// 关闭底层连接
-	err = wc.conn.c.Close()
+	if conn, ok := wc.conn.conn.(net.Conn); ok {
+		err = conn.Close()
+	} else {
+		err = fmt.Errorf("connection is not net.Conn")
+	}
 	wc.conn = nil
 
 	return err
@@ -258,11 +266,19 @@ func (wc *WebSocketClient) ReceiveLoop() {
 
 	for {
 		// 读取数据
-		n, err := wc.conn.c.Read(buf.Bytes())
-		if err != nil {
-			if wc.conn.onError != nil {
-				wc.conn.onError(err)
+		var n int
+		var err error
+		if conn, ok := wc.conn.conn.(net.Conn); ok {
+			n, err = conn.Read(buf.Bytes())
+			if err != nil {
+				if wc.conn.onError != nil {
+					wc.conn.onError(err)
+				}
+				wc.Close()
+				return
 			}
+		} else {
+			log.Printf("Error: connection is not net.Conn")
 			wc.Close()
 			return
 		}

@@ -42,8 +42,8 @@ func (c *Clock) SetZoneOffset(zoneOffset int64) {
 
 func (c *Clock) Now() time.Time {
 	now := time.Now()
-	if c.offset > 0 {
-		now = now.Add(time.Duration(c.offset))
+	if c.offset != 0 {
+		now = now.Add(time.Duration(c.offset) * time.Millisecond)
 	}
 	return now.In(c.Location)
 }

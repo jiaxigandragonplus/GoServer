@@ -1,6 +1,7 @@
 package timer
 
 import (
+	"container/heap"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -8,15 +9,39 @@ import (
 
 type TimerMgr struct {
 	timerMap    map[int64]*Timer
+	timerHeap   *TimerHeap
 	mu          sync.RWMutex
 	nextTimerId int64
 	stopChan    chan struct{}
 	running     bool
 }
 
+// TimerHeap 实现 heap.Interface 的小顶堆
+type TimerHeap []*Timer
+
+func (h TimerHeap) Len() int           { return len(h) }
+func (h TimerHeap) Less(i, j int) bool { return h[i].EndTs < h[j].EndTs }
+func (h TimerHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+
+func (h *TimerHeap) Push(x any) {
+	*h = append(*h, x.(*Timer))
+}
+
+func (h *TimerHeap) Pop() any {
+	old := *h
+	n := len(old)
+	x := old[n-1]
+	*h = old[0 : n-1]
+	return x
+}
+
 func NewTimerMgr() *TimerMgr {
+	timerHeap := &TimerHeap{}
+	heap.Init(timerHeap)
+
 	return &TimerMgr{
 		timerMap:    make(map[int64]*Timer),
+		timerHeap:   timerHeap,
 		nextTimerId: 1,
 		stopChan:    make(chan struct{}),
 		running:     false,
@@ -29,6 +54,10 @@ func (tm *TimerMgr) Init() {
 
 	if tm.timerMap == nil {
 		tm.timerMap = make(map[int64]*Timer)
+	}
+	if tm.timerHeap == nil {
+		tm.timerHeap = &TimerHeap{}
+		heap.Init(tm.timerHeap)
 	}
 	tm.nextTimerId = 1
 	tm.running = false
@@ -87,6 +116,7 @@ func (tm *TimerMgr) newTimerInternal(duration int64, data any, callback TimerCal
 	}
 
 	tm.timerMap[timerId] = timer
+	heap.Push(tm.timerHeap, timer)
 	return timerId
 }
 
@@ -103,7 +133,11 @@ func (tm *TimerMgr) CancelTimer(timerId int64) {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
-	delete(tm.timerMap, timerId)
+	if _, ok := tm.timerMap[timerId]; ok {
+		delete(tm.timerMap, timerId)
+		// 从堆中移除定时器
+		tm.removeTimerFromHeap(timerId)
+	}
 }
 
 func (tm *TimerMgr) GetTimerCount() int {
@@ -133,9 +167,15 @@ func (tm *TimerMgr) ResetTimer(timerId int64, duration int64) bool {
 	defer tm.mu.Unlock()
 
 	if timer, ok := tm.timerMap[timerId]; ok {
+		// 从堆中移除旧的定时器
+		tm.removeTimerFromHeap(timerId)
+
 		now := time.Now().UnixMilli()
 		timer.EndTs = now + duration
 		timer.Executed = 0 // 重置执行次数
+
+		// 重新插入堆中
+		heap.Push(tm.timerHeap, timer)
 		return true
 	}
 	return false
@@ -146,6 +186,9 @@ func (tm *TimerMgr) TriggerTimer(timerId int64) bool {
 	defer tm.mu.Unlock()
 
 	if timer, ok := tm.timerMap[timerId]; ok {
+		// 从堆中移除定时器
+		tm.removeTimerFromHeap(timerId)
+
 		if timer.Callback != nil {
 			go timer.Callback(timer.TimerData)
 		}
@@ -160,6 +203,8 @@ func (tm *TimerMgr) TriggerTimer(timerId int64) bool {
 				// 重新调度下一次执行
 				now := time.Now().UnixMilli()
 				timer.EndTs = now + timer.Interval
+				// 重新插入堆中
+				heap.Push(tm.timerHeap, timer)
 			}
 		} else {
 			// 一次性定时器，触发后删除
@@ -170,11 +215,25 @@ func (tm *TimerMgr) TriggerTimer(timerId int64) bool {
 	return false
 }
 
+// removeTimerFromHeap 从堆中移除指定的定时器
+// 注意：调用此函数前必须持有锁
+func (tm *TimerMgr) removeTimerFromHeap(timerId int64) {
+	// 线性搜索堆中的定时器
+	for i, timer := range *tm.timerHeap {
+		if timer.TimerId == timerId {
+			heap.Remove(tm.timerHeap, i)
+			return
+		}
+	}
+}
+
 func (tm *TimerMgr) ClearAll() {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
 	tm.timerMap = make(map[int64]*Timer)
+	tm.timerHeap = &TimerHeap{}
+	heap.Init(tm.timerHeap)
 }
 
 func (tm *TimerMgr) timerLoop() {
@@ -196,17 +255,25 @@ func (tm *TimerMgr) checkTimers() {
 	defer tm.mu.Unlock()
 
 	now := time.Now().UnixMilli() // 毫秒时间戳
-	var timersToProcess []*Timer
 
-	// 收集已过期的定时器
-	for _, timer := range tm.timerMap {
-		if timer.EndTs <= now {
-			timersToProcess = append(timersToProcess, timer)
+	// 处理所有已过期的定时器
+	for tm.timerHeap.Len() > 0 {
+		// 查看堆顶定时器（最早要执行的）
+		timer := (*tm.timerHeap)[0]
+
+		// 如果堆顶定时器还未到期，则后面的定时器也都未到期
+		if timer.EndTs > now {
+			break
 		}
-	}
 
-	// 处理定时器
-	for _, timer := range timersToProcess {
+		// 弹出堆顶定时器
+		heap.Pop(tm.timerHeap)
+
+		// 验证定时器是否还在map中（可能已被取消）
+		if _, exists := tm.timerMap[timer.TimerId]; !exists {
+			continue
+		}
+
 		// 执行回调
 		if timer.Callback != nil {
 			go timer.Callback(timer.TimerData)
@@ -225,6 +292,8 @@ func (tm *TimerMgr) checkTimers() {
 
 			// 重新调度下一次执行
 			timer.EndTs = now + timer.Interval
+			// 将更新后的定时器重新加入堆
+			heap.Push(tm.timerHeap, timer)
 		} else {
 			// 一次性定时器，执行后删除
 			delete(tm.timerMap, timer.TimerId)

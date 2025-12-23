@@ -38,6 +38,12 @@ func (wc *WebSocketClient) Connect() error {
 	}
 
 	// 发送握手请求
+	// 限制日志长度
+	logLen := 100
+	if len(request) < logLen {
+		logLen = len(request)
+	}
+	log.Printf("Sending handshake request (first %d chars): %s", logLen, request[:logLen])
 	_, err = conn.Write([]byte(request))
 	if err != nil {
 		conn.Close()

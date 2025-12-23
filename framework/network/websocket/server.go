@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/panjf2000/gnet/v2"
-	"github.com/panjf2000/gnet/v2/pkg/pool/bytebuffer"
 )
 
 const (
@@ -32,6 +31,7 @@ const (
 type WebSocketConn struct {
 	conn       interface{} // 可以是 gnet.Conn 或 net.Conn
 	isServer   bool
+	handshaked bool // 是否已完成握手
 	buffer     []byte
 	bufferSize int
 	mutex      sync.Mutex
@@ -72,6 +72,14 @@ func (ws *WebSocketServer) OnShutdown(eng gnet.Engine) {
 // OnOpen 实现 gNet.EventHandler 接口
 func (ws *WebSocketServer) OnOpen(c gnet.Conn) ([]byte, gnet.Action) {
 	log.Printf("New connection from %s", c.RemoteAddr().String())
+	// 在连接建立时创建 WebSocketConn 上下文（握手前）
+	// 这样在 OnTraffic 中即使第一次读取到 0 字节，上下文也不为 nil
+	wsConn := &WebSocketConn{
+		conn:     c,
+		isServer: true,
+	}
+	c.SetContext(wsConn)
+	log.Printf("Initial WebSocketConn context set for %s", c.RemoteAddr().String())
 	return nil, gnet.None
 }
 
@@ -87,26 +95,41 @@ func (ws *WebSocketServer) OnClose(c gnet.Conn, err error) gnet.Action {
 
 // OnTraffic 实现 gNet.EventHandler 接口
 func (ws *WebSocketServer) OnTraffic(c gnet.Conn) gnet.Action {
-	buf := bytebuffer.Get()
-	defer bytebuffer.Put(buf)
+	log.Printf("OnTraffic called for %s", c.RemoteAddr().String())
 
-	// 读取数据
-	n, err := c.Read(buf.Bytes())
+	// 使用固定大小的缓冲区读取数据
+	buf := make([]byte, 4096)
+	n, err := c.Read(buf)
 	if err != nil {
 		log.Printf("Read error: %v", err)
 		return gnet.Close
 	}
 
-	data := buf.Bytes()[:n]
+	// 如果没有数据可读，等待更多数据
+	if n == 0 {
+		log.Printf("No data available yet for %s, waiting...", c.RemoteAddr().String())
+		return gnet.None
+	}
+
+	data := buf[:n]
 
 	// 调试：打印接收到的数据的前几个字节
-	if len(data) > 0 {
-		// 简单的 min 函数实现
-		printLen := 10
-		if len(data) < printLen {
-			printLen = len(data)
-		}
-		log.Printf("Received %d bytes from %s, first bytes: %v", n, c.RemoteAddr().String(), data[:printLen])
+	// 简单的 min 函数实现
+	printLen := 10
+	if len(data) < printLen {
+		printLen = len(data)
+	}
+	log.Printf("Received %d bytes from %s, first bytes: %v", n, c.RemoteAddr().String(), data[:printLen])
+	// 同时打印为字符串，便于调试
+	if printLen > 0 {
+		log.Printf("Data as string (first %d chars): %s", printLen, string(data[:printLen]))
+	}
+
+	// 获取 WebSocket 连接对象
+	wsConn, ok := c.Context().(*WebSocketConn)
+	if !ok {
+		log.Printf("Connection context is not WebSocketConn for %s, context type: %T", c.RemoteAddr().String(), c.Context())
+		return gnet.Close
 	}
 
 	// 检查是否是 HTTP 请求（握手阶段）
@@ -125,22 +148,19 @@ func (ws *WebSocketServer) OnTraffic(c gnet.Conn) gnet.Action {
 			return gnet.Close
 		}
 
-		// 创建 WebSocket 连接对象并存储到连接上下文
-		wsConn := &WebSocketConn{
-			conn:     c,
-			isServer: true,
-		}
-		c.SetContext(wsConn)
-
-		log.Printf("WebSocket handshake completed for %s, context set", c.RemoteAddr().String())
+		// 标记握手完成
+		wsConn.handshaked = true
+		log.Printf("WebSocket handshake completed for %s", c.RemoteAddr().String())
 		return gnet.None
-	}
-
-	// 获取 WebSocket 连接对象
-	wsConn, ok := c.Context().(*WebSocketConn)
-	if !ok {
-		log.Printf("Connection context is not WebSocketConn for %s, context type: %T", c.RemoteAddr().String(), c.Context())
-		return gnet.Close
+	} else {
+		// 调试：检查数据中是否包含 GET
+		if bytes.Contains(data, []byte("GET")) {
+			printLen := 200
+			if len(data) < printLen {
+				printLen = len(data)
+			}
+			log.Printf("Data contains 'GET' but not at prefix. Full data (first %d chars): %s", printLen, string(data[:printLen]))
+		}
 	}
 
 	// 解析 WebSocket 帧

@@ -71,7 +71,7 @@ func (tm *TimerMgr) newTimerInternal(duration int64, data any, callback TimerCal
 	defer tm.mu.Unlock()
 
 	timerId := atomic.AddInt64(&tm.nextTimerId, 1)
-	now := time.Now().UnixNano() / 1e6 // 毫秒时间戳
+	now := time.Now().UnixMilli() // 毫秒时间戳
 	endTs := now + duration
 
 	timer := &Timer{
@@ -118,7 +118,7 @@ func (tm *TimerMgr) GetRemainingTime(timerId int64) int64 {
 	defer tm.mu.RUnlock()
 
 	if timer, ok := tm.timerMap[timerId]; ok {
-		now := time.Now().UnixNano() / 1e6
+		now := time.Now().UnixMilli()
 		remaining := timer.EndTs - now
 		if remaining < 0 {
 			return 0
@@ -133,7 +133,7 @@ func (tm *TimerMgr) ResetTimer(timerId int64, duration int64) bool {
 	defer tm.mu.Unlock()
 
 	if timer, ok := tm.timerMap[timerId]; ok {
-		now := time.Now().UnixNano() / 1e6
+		now := time.Now().UnixMilli()
 		timer.EndTs = now + duration
 		timer.Executed = 0 // 重置执行次数
 		return true
@@ -158,7 +158,7 @@ func (tm *TimerMgr) TriggerTimer(timerId int64) bool {
 				delete(tm.timerMap, timerId)
 			} else {
 				// 重新调度下一次执行
-				now := time.Now().UnixNano() / 1e6
+				now := time.Now().UnixMilli()
 				timer.EndTs = now + timer.Interval
 			}
 		} else {
@@ -195,7 +195,7 @@ func (tm *TimerMgr) checkTimers() {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
-	now := time.Now().UnixNano() / 1e6 // 毫秒时间戳
+	now := time.Now().UnixMilli() // 毫秒时间戳
 	var timersToProcess []*Timer
 
 	// 收集已过期的定时器

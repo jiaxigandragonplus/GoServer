@@ -125,7 +125,14 @@ func (tm *TimerMgr) UpdateTimer(timerId int64, endTs int64) {
 	defer tm.mu.Unlock()
 
 	if timer, ok := tm.timerMap[timerId]; ok {
+		// 从堆中移除旧的定时器
+		tm.removeTimerFromHeap(timerId)
+
+		// 更新结束时间
 		timer.EndTs = endTs
+
+		// 重新插入堆中
+		heap.Push(tm.timerHeap, timer)
 	}
 }
 

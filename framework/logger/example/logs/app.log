@@ -1,0 +1,9 @@
+{"level":"INFO","time":"2025-12-23T17:15:18.902+0800","caller":"logger/logger.go:286","msg":"文件日志记录已启用","file_path":"./logs/app.log","start_time":"2025-12-23T17:15:18.902+0800"}
+{"level":"INFO","time":"2025-12-23T17:15:18.903+0800","caller":"logger/logger.go:286","msg":"处理任务","task_id":1,"status":"processing","progress":20}
+{"level":"INFO","time":"2025-12-23T17:15:19.004+0800","caller":"logger/logger.go:286","msg":"处理任务","task_id":2,"status":"processing","progress":40}
+{"level":"INFO","time":"2025-12-23T17:15:19.105+0800","caller":"logger/logger.go:286","msg":"处理任务","task_id":3,"status":"processing","progress":60}
+{"level":"INFO","time":"2025-12-23T17:15:19.205+0800","caller":"logger/logger.go:286","msg":"处理任务","task_id":4,"status":"processing","progress":80}
+{"level":"INFO","time":"2025-12-23T17:15:19.306+0800","caller":"logger/logger.go:286","msg":"处理任务","task_id":5,"status":"processing","progress":100}
+{"level":"INFO","time":"2025-12-23T17:15:19.407+0800","caller":"logger/logger.go:286","msg":"所有任务完成","total_tasks":5,"total_duration":"500ms"}
+{"level":"INFO","time":"2025-12-23T17:15:19.407+0800","caller":"logger/logger.go:286","msg":"开始性能测试"}
+{"level":"INFO","time":"2025-12-23T17:15:19.407+0800","caller":"logger/logger.go:286","msg":"性能测试完成","iterations":1000,"total_time":"75.208µs","avg_time_per_log":0.000075208}

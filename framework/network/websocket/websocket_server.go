@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
+	"net"
 	"strings"
 	"sync"
 	"time"
@@ -29,11 +30,15 @@ const (
 
 // WebSocketConn 表示一个 WebSocket 连接
 type WebSocketConn struct {
-	c          gnet.Conn
+	c          net.Conn
 	isServer   bool
 	buffer     []byte
 	bufferSize int
 	mutex      sync.Mutex
+	// 回调函数
+	onMessage func([]byte)
+	onClose   func()
+	onError   func(error)
 }
 
 // WebSocketServer 实现 gNet.EventHandler
@@ -343,7 +348,7 @@ func (ws *WebSocketServer) handleFrame(wsConn *WebSocketConn, frame []byte) gnet
 }
 
 // sendFrame 发送 WebSocket 帧
-func (ws *WebSocketServer) sendFrame(c gnet.Conn, opcode byte, payload []byte) error {
+func (ws *WebSocketServer) sendFrame(c net.Conn, opcode byte, payload []byte) error {
 	// 构建帧头
 	var header []byte
 	payloadLen := len(payload)
@@ -380,22 +385,22 @@ func (ws *WebSocketServer) sendFrame(c gnet.Conn, opcode byte, payload []byte) e
 }
 
 // sendText 发送文本消息
-func (ws *WebSocketServer) sendText(c gnet.Conn, text []byte) error {
+func (ws *WebSocketServer) sendText(c net.Conn, text []byte) error {
 	return ws.sendFrame(c, OpCodeText, text)
 }
 
 // sendBinary 发送二进制消息
-func (ws *WebSocketServer) sendBinary(c gnet.Conn, data []byte) error {
+func (ws *WebSocketServer) sendBinary(c net.Conn, data []byte) error {
 	return ws.sendFrame(c, OpCodeBinary, data)
 }
 
 // sendPing 发送 Ping 消息
-func (ws *WebSocketServer) sendPing(c gnet.Conn, data []byte) error {
+func (ws *WebSocketServer) sendPing(c net.Conn, data []byte) error {
 	return ws.sendFrame(c, OpCodePing, data)
 }
 
 // sendPong 发送 Pong 消息
-func (ws *WebSocketServer) sendPong(c gnet.Conn, data []byte) error {
+func (ws *WebSocketServer) sendPong(c net.Conn, data []byte) error {
 	return ws.sendFrame(c, OpCodePong, data)
 }
 

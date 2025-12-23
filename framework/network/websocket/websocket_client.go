@@ -1,14 +1,14 @@
 package websocket
 
 import (
-	"bytes"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"log"
+	"net"
+	"strings"
 	"sync"
 
-	"github.com/panjf2000/gnet/v2"
 	"github.com/panjf2000/gnet/v2/pkg/pool/bytebuffer"
 )
 
@@ -31,8 +31,8 @@ func (wc *WebSocketClient) Connect() error {
 	// 创建握手请求
 	request := wc.createHandshakeRequest()
 
-	// 使用 gNet 连接到服务器
-	conn, err := gnet.Dial("tcp", wc.addr)
+	// 使用 net.Dial 连接到服务器
+	conn, err := net.Dial("tcp", wc.addr)
 	if err != nil {
 		return fmt.Errorf("failed to connect to server: %v", err)
 	}
@@ -52,10 +52,18 @@ func (wc *WebSocketClient) Connect() error {
 		return fmt.Errorf("failed to read handshake response: %v", err)
 	}
 
-	// 验证握手响应
-	if !bytes.Contains(buf[:n], []byte("101 Switching Protocols")) {
+	response := string(buf[:n])
+
+	// 验证握手响应 - 暂时只检查 101 Switching Protocols
+	// 完整的 Sec-WebSocket-Accept 验证可以在后续版本中添加
+	if !strings.Contains(response, "101 Switching Protocols") {
+		// 限制错误消息长度
+		maxLen := 100
+		if len(response) < maxLen {
+			maxLen = len(response)
+		}
 		conn.Close()
-		return fmt.Errorf("handshake failed: invalid response")
+		return fmt.Errorf("handshake failed: invalid response: %s", response[:maxLen])
 	}
 
 	// 创建 WebSocket 连接对象
@@ -67,8 +75,8 @@ func (wc *WebSocketClient) Connect() error {
 		onError:   func(error) {},  // 默认空实现
 	}
 
-	// 设置连接上下文
-	conn.SetContext(wc.conn)
+	// 启动接收循环
+	go wc.receiveLoop()
 
 	log.Printf("Connected to WebSocket server at %s", wc.addr)
 	return nil
@@ -152,20 +160,23 @@ func (wc *WebSocketClient) sendFrame(opcode byte, payload []byte) error {
 	var header []byte
 	payloadLen := len(payload)
 
+	// 客户端到服务器的帧必须被掩码（设置掩码位为1）
+	maskBit := byte(0x80)
+
 	if payloadLen <= 125 {
-		header = make([]byte, 2)
+		header = make([]byte, 6)  // 2字节头部 + 4字节掩码密钥
 		header[0] = 0x80 | opcode // FIN=1, opcode
-		header[1] = byte(payloadLen)
+		header[1] = maskBit | byte(payloadLen)
 	} else if payloadLen <= 65535 {
-		header = make([]byte, 4)
+		header = make([]byte, 8)  // 4字节头部 + 4字节掩码密钥
 		header[0] = 0x80 | opcode // FIN=1, opcode
-		header[1] = 126           // extended payload length
+		header[1] = maskBit | 126 // extended payload length
 		header[2] = byte(payloadLen >> 8)
 		header[3] = byte(payloadLen & 0xFF)
 	} else {
-		header = make([]byte, 10)
+		header = make([]byte, 14) // 10字节头部 + 4字节掩码密钥
 		header[0] = 0x80 | opcode // FIN=1, opcode
-		header[1] = 127           // extended payload length
+		header[1] = maskBit | 127 // extended payload length
 		header[2] = byte((payloadLen >> 56) & 0xFF)
 		header[3] = byte((payloadLen >> 48) & 0xFF)
 		header[4] = byte((payloadLen >> 40) & 0xFF)
@@ -176,8 +187,23 @@ func (wc *WebSocketClient) sendFrame(opcode byte, payload []byte) error {
 		header[9] = byte(payloadLen & 0xFF)
 	}
 
-	// 合并头部和有效载荷
-	frame := append(header, payload...)
+	// 生成随机掩码密钥（4字节）
+	maskKey := make([]byte, 4)
+	rand.Read(maskKey)
+
+	// 将掩码密钥复制到头部
+	maskKeyStart := len(header) - 4
+	copy(header[maskKeyStart:], maskKey)
+
+	// 对有效载荷进行掩码处理
+	maskedPayload := make([]byte, len(payload))
+	copy(maskedPayload, payload)
+	for i := 0; i < len(maskedPayload); i++ {
+		maskedPayload[i] ^= maskKey[i%4]
+	}
+
+	// 合并头部和掩码后的有效载荷
+	frame := append(header, maskedPayload...)
 
 	_, err := wc.conn.c.Write(frame)
 	return err
@@ -282,8 +308,8 @@ func (wc *WebSocketClient) parseFrames(data []byte, wsConn *WebSocketConn) ([][]
 		}
 
 		// 解析帧头
-		fin := (buf[0] & 0x80) != 0
-		opcode := buf[0] & 0x0F
+		_ = (buf[0] & 0x80) != 0 // fin (未使用)
+		_ = buf[0] & 0x0F        // opcode (未使用)
 		masked := (buf[1] & 0x80) != 0
 		payloadLen := int(buf[1] & 0x7F)
 

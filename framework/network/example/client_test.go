@@ -1,14 +1,16 @@
-package websocket
+package main
 
 import (
 	"log"
 	"testing"
 	"time"
+
+	"github.com/GooLuck/GoServer/framework/network/websocket"
 )
 
-func TestWebSocketClient(t *testing.T) {
+func TestWebsocketClient(t *testing.T) {
 	// 创建 WebSocket 客户端
-	client := NewWebSocketClient("localhost:8080")
+	client := websocket.NewWebSocketClient("localhost:8080")
 
 	// 设置消息回调
 	client.SetOnMessage(func(message []byte) {
@@ -32,7 +34,7 @@ func TestWebSocketClient(t *testing.T) {
 	}
 
 	// 启动接收循环（在单独的 goroutine 中）
-	go client.receiveLoop()
+	go client.ReceiveLoop()
 
 	// 发送一些测试消息
 	time.Sleep(1 * time.Second)

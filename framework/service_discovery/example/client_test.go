@@ -108,7 +108,7 @@ func TestHealthChecker(t *testing.T) {
 
 // TestConcurrentRegistration 测试并发注册
 func TestConcurrentRegistration(t *testing.T) {
-	t.Skip("Skipping concurrent test that requires etcd server")
+	//t.Skip("Skipping concurrent test that requires etcd server")
 
 	config := &service_discovery.Config{
 		Endpoints:   []string{"localhost:2379"},

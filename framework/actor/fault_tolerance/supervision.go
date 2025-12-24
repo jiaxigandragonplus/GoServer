@@ -7,6 +7,7 @@ import (
 
 	"github.com/GooLuck/GoServer/framework/actor"
 	"github.com/GooLuck/GoServer/framework/actor/message"
+	"github.com/GooLuck/GoServer/framework/actor/monitor"
 )
 
 // SupervisionStrategy 监督策略类型
@@ -84,7 +85,7 @@ func NewDefaultSupervisor(strategy SupervisionStrategy) *DefaultSupervisor {
 		maxRestarts:       3,
 		maxRestartsWindow: 1 * time.Minute,
 		restartCounts:     make(map[string]RestartInfo),
-		monitor:           actor.GetDefaultMonitor(),
+		monitor:           monitor.GetDefaultMonitor(),
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/GooLuck/GoServer/framework/actor"
 	"github.com/GooLuck/GoServer/framework/actor/message"
+	"github.com/GooLuck/GoServer/framework/actor/monitor"
 )
 
 // WorkerActor 工作actor，演示生命周期和错误处理
@@ -347,10 +348,10 @@ func exampleMonitoring(ctx context.Context) {
 	fmt.Println("\n--- 示例4: 监控和状态管理 ---")
 
 	// 获取默认监控器
-	monitor := actor.GetDefaultMonitor()
+	defaultMonitor := monitor.GetDefaultMonitor()
 
 	// 获取默认状态管理器
-	stateManager := actor.GetDefaultStateManager()
+	stateManager := monitor.GetDefaultStateManager()
 
 	// 创建并启动多个actor
 	actorList := make([]actor.Actor, 3)
@@ -364,7 +365,7 @@ func exampleMonitoring(ctx context.Context) {
 
 		// 设置监控器
 		if ctx := worker.Context(); ctx != nil {
-			ctx.SetMonitor(monitor)
+			ctx.SetMonitor(defaultMonitor)
 		}
 
 		// 启动actor

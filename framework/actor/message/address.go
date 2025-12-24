@@ -7,57 +7,60 @@ import (
 	"sync"
 )
 
-// AddressType 地址类型
-type AddressType int
-
-const (
-	// AddressTypeLocal 本地地址
-	AddressTypeLocal AddressType = iota
-	// AddressTypeRemote 远程地址
-	AddressTypeRemote
-)
-
 // Protocol 支持的协议类型
 type Protocol string
 
 const (
-	// ProtocolActor 本地Actor协议
-	ProtocolActor Protocol = "actor"
-	// ProtocolTCP TCP协议
+	// ProtocolLocal 本地协议（默认，进程内通信）
+	ProtocolLocal Protocol = "local"
+	// ProtocolSystem 系统协议（框架内部使用）
+	ProtocolSystem Protocol = "system"
+	// ProtocolTCP TCP协议（远程通信）
 	ProtocolTCP Protocol = "tcp"
 	// ProtocolWebSocket WebSocket协议
 	ProtocolWebSocket Protocol = "ws"
-	// ProtocolWebSocketSecure 安全的WebSocket协议
-	ProtocolWebSocketSecure Protocol = "wss"
-	// ProtocolHTTP HTTP协议
-	ProtocolHTTP Protocol = "http"
-	// ProtocolHTTPS HTTPS协议
-	ProtocolHTTPS Protocol = "https"
 	// ProtocolGRPC gRPC协议
 	ProtocolGRPC Protocol = "grpc"
-	// ProtocolInProc 进程内协议
-	ProtocolInProc Protocol = "inproc"
-	// ProtocolIPC 进程间通信协议
-	ProtocolIPC Protocol = "ipc"
 )
 
-// 支持的协议列表
+// 本地协议（进程内通信）
+var localProtocols = map[Protocol]bool{
+	ProtocolLocal:  true,
+	ProtocolSystem: true,
+}
+
+// 网络协议（跨进程/机器通信）
+var networkProtocols = map[Protocol]bool{
+	ProtocolTCP:       true,
+	ProtocolWebSocket: true,
+	ProtocolGRPC:      true,
+}
+
+// 所有支持的协议
 var supportedProtocols = map[Protocol]bool{
-	ProtocolActor:           true,
-	ProtocolTCP:             true,
-	ProtocolWebSocket:       true,
-	ProtocolWebSocketSecure: true,
-	ProtocolHTTP:            true,
-	ProtocolHTTPS:           true,
-	ProtocolGRPC:            true,
-	ProtocolInProc:          true,
-	ProtocolIPC:             true,
+	ProtocolLocal:     true,
+	ProtocolSystem:    true,
+	ProtocolTCP:       true,
+	ProtocolWebSocket: true,
+	ProtocolGRPC:      true,
 }
 
 // IsProtocolSupported 检查协议是否受支持
 func IsProtocolSupported(protocol string) bool {
 	_, supported := supportedProtocols[Protocol(protocol)]
 	return supported
+}
+
+// IsLocalProtocol 检查是否是本地协议
+func IsLocalProtocol(protocol string) bool {
+	_, isLocal := localProtocols[Protocol(protocol)]
+	return isLocal
+}
+
+// IsNetworkProtocol 检查是否是网络协议
+func IsNetworkProtocol(protocol string) bool {
+	_, isNetwork := networkProtocols[Protocol(protocol)]
+	return isNetwork
 }
 
 // ValidateProtocol 验证协议
@@ -83,6 +86,24 @@ func getSupportedProtocolsList() []string {
 	return protocols
 }
 
+// getLocalProtocolsList 获取本地协议列表
+func getLocalProtocolsList() []string {
+	protocols := make([]string, 0, len(localProtocols))
+	for protocol := range localProtocols {
+		protocols = append(protocols, string(protocol))
+	}
+	return protocols
+}
+
+// getNetworkProtocolsList 获取网络协议列表
+func getNetworkProtocolsList() []string {
+	protocols := make([]string, 0, len(networkProtocols))
+	for protocol := range networkProtocols {
+		protocols = append(protocols, string(protocol))
+	}
+	return protocols
+}
+
 // ActorAddress Actor地址实现
 type ActorAddress struct {
 	protocol string
@@ -90,7 +111,6 @@ type ActorAddress struct {
 	port     string
 	path     string
 	address  string // 完整地址字符串
-	addrType AddressType
 }
 
 // NewLocalAddress 创建本地地址
@@ -100,12 +120,17 @@ func NewLocalAddress(protocol, path string) (*ActorAddress, error) {
 		return nil, err
 	}
 
+	// 确保是本地协议
+	if !IsLocalProtocol(protocol) {
+		return nil, fmt.Errorf("protocol %s is not a local protocol. Local protocols: %v",
+			protocol, getLocalProtocolsList())
+	}
+
 	addr := &ActorAddress{
 		protocol: protocol,
 		host:     "localhost",
 		port:     "",
 		path:     path,
-		addrType: AddressTypeLocal,
 	}
 	addr.address = addr.buildAddressString()
 	return addr, nil
@@ -128,11 +153,59 @@ func NewRemoteAddress(protocol, host, port, path string) (*ActorAddress, error) 
 		host:     host,
 		port:     port,
 		path:     path,
-		addrType: AddressTypeRemote,
 	}
 	addr.address = addr.buildAddressString()
 	return addr, nil
 }
+
+// NewAddress 创建地址（自动判断本地/远程）
+func NewAddress(protocol, host, port, path string) (*ActorAddress, error) {
+	if IsLocalProtocol(protocol) {
+		// 本地协议，忽略host和port
+		return NewLocalAddress(protocol, path)
+	} else if IsNetworkProtocol(protocol) {
+		// 网络协议
+		return NewRemoteAddress(protocol, host, port, path)
+	} else {
+		return nil, fmt.Errorf("unknown protocol type: %s", protocol)
+	}
+}
+
+// NewLocalActorAddress 创建本地actor地址（简化接口）
+func NewLocalActorAddress(path string) (*ActorAddress, error) {
+	return NewLocalAddress(string(ProtocolLocal), path)
+}
+
+// NewRemoteActorAddress 创建远程actor地址（简化接口）
+func NewRemoteActorAddress(protocol, host, port, path string) (*ActorAddress, error) {
+	if !IsNetworkProtocol(protocol) {
+		return nil, fmt.Errorf("protocol %s is not a network protocol", protocol)
+	}
+	return NewRemoteAddress(protocol, host, port, path)
+}
+
+// MustNewLocalActorAddress 创建本地actor地址（失败时panic）
+func MustNewLocalActorAddress(path string) *ActorAddress {
+	addr, err := NewLocalActorAddress(path)
+	if err != nil {
+		panic(err)
+	}
+	return addr
+}
+
+// MustNewRemoteActorAddress 创建远程actor地址（失败时panic）
+func MustNewRemoteActorAddress(protocol, host, port, path string) *ActorAddress {
+	addr, err := NewRemoteActorAddress(protocol, host, port, path)
+	if err != nil {
+		panic(err)
+	}
+	return addr
+}
+
+// 示例地址格式
+// 本地: local:///user/actorA
+// 远程: tcp://192.168.1.100:8080/user/actorC
+// 系统: system:///deadLetters
 
 // NewLocalAddressWithValidation 创建本地地址（带验证，返回错误）
 func NewLocalAddressWithValidation(protocol, path string) (*ActorAddress, error) {
@@ -183,17 +256,11 @@ func ParseAddress(addrStr string) (*ActorAddress, error) {
 		address:  addrStr,
 	}
 
-	// 判断地址类型
-	if addr.host == "localhost" || addr.host == "127.0.0.1" || addr.host == "::1" || addr.host == "" {
-		addr.addrType = AddressTypeLocal
-		// 对于本地地址，如果主机为空，设置为localhost
-		if addr.host == "" {
-			addr.host = "localhost"
-			// 重新构建地址字符串
-			addr.address = addr.buildAddressString()
-		}
-	} else {
-		addr.addrType = AddressTypeRemote
+	// 对于本地协议，如果主机为空，设置为localhost
+	if IsLocalProtocol(u.Scheme) && (addr.host == "" || addr.host == "localhost" || addr.host == "127.0.0.1" || addr.host == "::1") {
+		addr.host = "localhost"
+		// 重新构建地址字符串
+		addr.address = addr.buildAddressString()
 	}
 
 	return addr, nil
@@ -227,16 +294,11 @@ func (a *ActorAddress) Equal(other Address) bool {
 }
 
 func (a *ActorAddress) IsLocal() bool {
-	return a.addrType == AddressTypeLocal
+	return IsLocalProtocol(a.protocol)
 }
 
 func (a *ActorAddress) IsRemote() bool {
-	return a.addrType == AddressTypeRemote
-}
-
-// Type 返回地址类型
-func (a *ActorAddress) Type() AddressType {
-	return a.addrType
+	return IsNetworkProtocol(a.protocol)
 }
 
 // buildAddressString 构建地址字符串

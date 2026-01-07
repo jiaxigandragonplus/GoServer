@@ -354,6 +354,6 @@ func ErrorField(err error) zap.Field {
 }
 
 // Any 创建任意类型字段
-func Any(key string, value interface{}) zap.Field {
+func Any(key string, value any) zap.Field {
 	return zap.Any(key, value)
 }

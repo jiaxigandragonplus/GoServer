@@ -23,7 +23,7 @@ func NewBinarySerializer(opts ...func(*Options)) *BinarySerializer {
 }
 
 // Serialize 序列化对象为二进制
-func (s *BinarySerializer) Serialize(v interface{}) ([]byte, error) {
+func (s *BinarySerializer) Serialize(v any) ([]byte, error) {
 	if v == nil {
 		return nil, ErrNilValue
 	}
@@ -65,7 +65,7 @@ func (s *BinarySerializer) Serialize(v interface{}) ([]byte, error) {
 }
 
 // Deserialize 从二进制反序列化对象
-func (s *BinarySerializer) Deserialize(data []byte, v interface{}) error {
+func (s *BinarySerializer) Deserialize(data []byte, v any) error {
 	if len(data) == 0 {
 		return ErrInvalidData
 	}
@@ -139,7 +139,7 @@ func NewBinaryEncoder(opts ...func(*Options)) *BinaryEncoder {
 }
 
 // Encode 编码对象
-func (e *BinaryEncoder) Encode(v interface{}) error {
+func (e *BinaryEncoder) Encode(v any) error {
 	if v == nil {
 		return ErrNilValue
 	}
@@ -172,7 +172,7 @@ func NewBinaryDecoder(data []byte, opts ...func(*Options)) *BinaryDecoder {
 }
 
 // Decode 解码到对象
-func (d *BinaryDecoder) Decode(v interface{}) error {
+func (d *BinaryDecoder) Decode(v any) error {
 	if v == nil {
 		return ErrNilValue
 	}
@@ -547,7 +547,7 @@ func decryptRSA(data []byte) ([]byte, error) {
 }
 
 // BinarySize 计算二进制大小
-func BinarySize(v interface{}) (int, error) {
+func BinarySize(v any) (int, error) {
 	if v == nil {
 		return 0, nil
 	}

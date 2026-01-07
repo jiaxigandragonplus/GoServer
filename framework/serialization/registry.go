@@ -179,7 +179,7 @@ func GetDefaultSerializerRegistry() *SerializerRegistry {
 }
 
 // Serialize 使用默认注册表序列化对象
-func Serialize(v interface{}, format Format, opts ...func(*Options)) ([]byte, error) {
+func Serialize(v any, format Format, opts ...func(*Options)) ([]byte, error) {
 	registry := GetDefaultSerializerRegistry()
 	serializer, err := registry.Get(format, opts...)
 	if err != nil {
@@ -189,7 +189,7 @@ func Serialize(v interface{}, format Format, opts ...func(*Options)) ([]byte, er
 }
 
 // Deserialize 使用默认注册表反序列化对象
-func Deserialize(data []byte, format Format, v interface{}, opts ...func(*Options)) error {
+func Deserialize(data []byte, format Format, v any, opts ...func(*Options)) error {
 	registry := GetDefaultSerializerRegistry()
 	serializer, err := registry.Get(format, opts...)
 	if err != nil {
@@ -244,17 +244,17 @@ func NewCodec(registry *SerializerRegistry) *Codec {
 }
 
 // Encode 编码
-func (c *Codec) Encode(v interface{}, format Format, opts ...func(*Options)) ([]byte, error) {
+func (c *Codec) Encode(v any, format Format, opts ...func(*Options)) ([]byte, error) {
 	return Serialize(v, format, opts...)
 }
 
 // Decode 解码
-func (c *Codec) Decode(data []byte, format Format, v interface{}, opts ...func(*Options)) error {
+func (c *Codec) Decode(data []byte, format Format, v any, opts ...func(*Options)) error {
 	return Deserialize(data, format, v, opts...)
 }
 
 // AutoDecode 自动解码（根据内容类型）
-func (c *Codec) AutoDecode(data []byte, contentType string, v interface{}, opts ...func(*Options)) error {
+func (c *Codec) AutoDecode(data []byte, contentType string, v any, opts ...func(*Options)) error {
 	format := AutoDetectFormat(data, contentType)
 	return c.Decode(data, format, v, opts...)
 }
@@ -283,12 +283,12 @@ func (m *MultiCodec) GetCodec(format Format) *Codec {
 }
 
 // Encode 编码
-func (m *MultiCodec) Encode(v interface{}, format Format, opts ...func(*Options)) ([]byte, error) {
+func (m *MultiCodec) Encode(v any, format Format, opts ...func(*Options)) ([]byte, error) {
 	return m.GetCodec(format).Encode(v, format, opts...)
 }
 
 // Decode 解码
-func (m *MultiCodec) Decode(data []byte, format Format, v interface{}, opts ...func(*Options)) error {
+func (m *MultiCodec) Decode(data []byte, format Format, v any, opts ...func(*Options)) error {
 	return m.GetCodec(format).Decode(data, format, v, opts...)
 }
 

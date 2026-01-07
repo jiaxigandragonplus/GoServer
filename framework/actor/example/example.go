@@ -35,7 +35,7 @@ func (a *EchoActor) HandleMessage(ctx context.Context, envelope *message.Envelop
 		a.Address().String(), msg.Type(), msg.Data())
 
 	// 创建回显消息
-	echoMsg := message.NewBaseMessage("echo.response", map[string]interface{}{
+	echoMsg := message.NewBaseMessage("echo.response", map[string]any{
 		"original":     msg.Data(),
 		"timestamp":    time.Now().Unix(),
 		"processed_by": a.Address().String(),
@@ -77,7 +77,7 @@ func (a *CounterActor) HandleMessage(ctx context.Context, envelope *message.Enve
 		a.mu.Unlock()
 
 		// 发送回复
-		replyMsg := message.NewBaseMessage("counter.response", map[string]interface{}{
+		replyMsg := message.NewBaseMessage("counter.response", map[string]any{
 			"action":  "increment",
 			"counter": current,
 			"success": true,
@@ -90,7 +90,7 @@ func (a *CounterActor) HandleMessage(ctx context.Context, envelope *message.Enve
 		current := a.counter
 		a.mu.Unlock()
 
-		replyMsg := message.NewBaseMessage("counter.response", map[string]interface{}{
+		replyMsg := message.NewBaseMessage("counter.response", map[string]any{
 			"action":  "decrement",
 			"counter": current,
 			"success": true,
@@ -102,7 +102,7 @@ func (a *CounterActor) HandleMessage(ctx context.Context, envelope *message.Enve
 		current := a.counter
 		a.mu.RUnlock()
 
-		replyMsg := message.NewBaseMessage("counter.response", map[string]interface{}{
+		replyMsg := message.NewBaseMessage("counter.response", map[string]any{
 			"action":  "get",
 			"counter": current,
 			"success": true,
@@ -111,7 +111,7 @@ func (a *CounterActor) HandleMessage(ctx context.Context, envelope *message.Enve
 
 	default:
 		// 未知消息类型
-		replyMsg := message.NewBaseMessage("error.response", map[string]interface{}{
+		replyMsg := message.NewBaseMessage("error.response", map[string]any{
 			"error":   "unknown message type",
 			"type":    msg.Type(),
 			"success": false,
@@ -173,7 +173,7 @@ func exampleBasicActor(ctx context.Context) {
 	fmt.Printf("回显actor已启动: %s\n", echoActor.Address().String())
 
 	// 创建测试消息
-	testMsg := message.NewBaseMessage("test.echo", map[string]interface{}{
+	testMsg := message.NewBaseMessage("test.echo", map[string]any{
 		"message": "Hello, Actor System!",
 		"number":  42,
 		"active":  true,
@@ -307,7 +307,7 @@ func exampleActorCommunication(ctx context.Context) {
 	clientAddr, _ := message.NewLocalAddress("local", "/client/main")
 
 	// 创建消息
-	msgToEcho := message.NewBaseMessage("test.communication", map[string]interface{}{
+	msgToEcho := message.NewBaseMessage("test.communication", map[string]any{
 		"from":    "client",
 		"to":      "echo",
 		"content": "测试actor间通信",
@@ -324,7 +324,7 @@ func exampleActorCommunication(ctx context.Context) {
 	}
 
 	// 测试2: 客户端发送消息到计数器actor
-	msgToCounter := message.NewBaseMessage("counter.increment", map[string]interface{}{
+	msgToCounter := message.NewBaseMessage("counter.increment", map[string]any{
 		"amount": 5,
 	})
 	msgToCounter.SetSender(clientAddr)

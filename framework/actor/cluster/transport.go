@@ -23,7 +23,7 @@ type TCPTransport struct {
 	ctx        context.Context
 	cancel     context.CancelFunc
 	wg         sync.WaitGroup
-	msgChan    chan interface{}
+	msgChan    chan any
 }
 
 // NewTCPTransport 创建新的TCP传输
@@ -37,7 +37,7 @@ func NewTCPTransport(host string, port int) (*TCPTransport, error) {
 		handlers: make(map[string]MessageHandler),
 		ctx:      ctx,
 		cancel:   cancel,
-		msgChan:  make(chan interface{}, 100),
+		msgChan:  make(chan any, 100),
 	}
 
 	return transport, nil
@@ -126,7 +126,7 @@ func (t *TCPTransport) Send(ctx context.Context, address string, msg message.Mes
 }
 
 // Receive 接收消息
-func (t *TCPTransport) Receive(ctx context.Context) (interface{}, error) {
+func (t *TCPTransport) Receive(ctx context.Context) (any, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -299,7 +299,7 @@ func (t *TCPTransport) processMessages() {
 }
 
 // handleMessage 处理消息
-func (t *TCPTransport) handleMessage(msg interface{}) {
+func (t *TCPTransport) handleMessage(msg any) {
 	// 根据消息类型调用相应的处理器
 	switch m := msg.(type) {
 	case *HeartbeatMessage:
@@ -368,13 +368,13 @@ func (t *TCPTransport) removeConnection(address string) {
 }
 
 // serializeMessage 序列化消息
-func (t *TCPTransport) serializeMessage(msg interface{}) ([]byte, error) {
+func (t *TCPTransport) serializeMessage(msg any) ([]byte, error) {
 	// 使用JSON序列化
 	return json.Marshal(msg)
 }
 
 // deserializeMessage 反序列化消息
-func (t *TCPTransport) deserializeMessage(data []byte) (interface{}, error) {
+func (t *TCPTransport) deserializeMessage(data []byte) (any, error) {
 	// 尝试解析为不同类型的消息
 	var msgType struct {
 		Type string `json:"type"`
@@ -421,7 +421,7 @@ type SimpleTransport struct {
 	handlersMu sync.RWMutex
 	ctx        context.Context
 	cancel     context.CancelFunc
-	msgChan    chan interface{}
+	msgChan    chan any
 }
 
 // NewSimpleTransport 创建新的简单传输
@@ -433,7 +433,7 @@ func NewSimpleTransport(address string) (*SimpleTransport, error) {
 		handlers: make(map[string]MessageHandler),
 		ctx:      ctx,
 		cancel:   cancel,
-		msgChan:  make(chan interface{}, 100),
+		msgChan:  make(chan any, 100),
 	}, nil
 }
 
@@ -471,7 +471,7 @@ func (st *SimpleTransport) Send(ctx context.Context, address string, msg message
 }
 
 // Receive 接收消息
-func (st *SimpleTransport) Receive(ctx context.Context) (interface{}, error) {
+func (st *SimpleTransport) Receive(ctx context.Context) (any, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()

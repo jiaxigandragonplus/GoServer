@@ -691,7 +691,7 @@ func (cm *ClusterManager) sendRemote(ctx context.Context, receiver message.Addre
 }
 
 // handleMessage 处理接收到的消息
-func (cm *ClusterManager) handleMessage(msg interface{}) error {
+func (cm *ClusterManager) handleMessage(msg any) error {
 	// 在实际实现中，这里应该根据消息类型进行处理
 	// 例如：心跳消息、选举消息、actor消息等
 	cm.logger.Debug("Received message", logger.String("type", fmt.Sprintf("%T", msg)))

@@ -151,7 +151,7 @@ type ActorBuilder struct {
 	parent      Actor
 	mailboxMgr  mailbox.MailboxManager
 	mailboxConf mailbox.Config
-	contextData map[string]interface{}
+	contextData map[string]any
 	supervision SupervisionStrategy
 	monitor     Monitor
 }
@@ -161,7 +161,7 @@ func NewActorBuilder(actorType string) *ActorBuilder {
 	return &ActorBuilder{
 		actorType:   actorType,
 		mailboxConf: mailbox.DefaultConfig(),
-		contextData: make(map[string]interface{}),
+		contextData: make(map[string]any),
 		supervision: SupervisionStrategyRestart,
 	}
 }
@@ -191,7 +191,7 @@ func (b *ActorBuilder) WithMailboxConfig(config mailbox.Config) *ActorBuilder {
 }
 
 // WithContextData 设置上下文数据
-func (b *ActorBuilder) WithContextData(key string, value interface{}) *ActorBuilder {
+func (b *ActorBuilder) WithContextData(key string, value any) *ActorBuilder {
 	b.contextData[key] = value
 	return b
 }

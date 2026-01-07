@@ -30,7 +30,7 @@ type Transport interface {
 	// Send 发送消息
 	Send(ctx context.Context, address string, msg message.Message) error
 	// Receive 接收消息
-	Receive(ctx context.Context) (interface{}, error)
+	Receive(ctx context.Context) (any, error)
 	// Broadcast 广播消息
 	Broadcast(ctx context.Context, msg message.Message) error
 	// Address 返回传输层地址
@@ -74,7 +74,7 @@ const (
 // MessageHandler 消息处理器接口
 type MessageHandler interface {
 	// HandleMessage 处理消息
-	HandleMessage(ctx context.Context, msg interface{}) error
+	HandleMessage(ctx context.Context, msg any) error
 }
 
 // ClusterMessage 集群消息接口

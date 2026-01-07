@@ -21,7 +21,7 @@ func NewProtobufSerializer(opts ...func(*Options)) *ProtobufSerializer {
 }
 
 // Serialize 序列化对象为Protobuf
-func (s *ProtobufSerializer) Serialize(v interface{}) ([]byte, error) {
+func (s *ProtobufSerializer) Serialize(v any) ([]byte, error) {
 	if v == nil {
 		return nil, ErrNilValue
 	}
@@ -42,7 +42,7 @@ func (s *ProtobufSerializer) Serialize(v interface{}) ([]byte, error) {
 }
 
 // Deserialize 从Protobuf反序列化对象
-func (s *ProtobufSerializer) Deserialize(data []byte, v interface{}) error {
+func (s *ProtobufSerializer) Deserialize(data []byte, v any) error {
 	if len(data) == 0 {
 		return ErrInvalidData
 	}
@@ -88,7 +88,7 @@ func NewProtobufEncoder() *ProtobufEncoder {
 }
 
 // Encode 编码对象
-func (e *ProtobufEncoder) Encode(v interface{}) ([]byte, error) {
+func (e *ProtobufEncoder) Encode(v any) ([]byte, error) {
 	if v == nil {
 		return nil, ErrNilValue
 	}
@@ -117,7 +117,7 @@ func NewProtobufDecoder(data []byte) *ProtobufDecoder {
 }
 
 // Decode 解码到对象
-func (d *ProtobufDecoder) Decode(v interface{}) error {
+func (d *ProtobufDecoder) Decode(v any) error {
 	if v == nil {
 		return ErrNilValue
 	}
@@ -146,7 +146,7 @@ func NewProtobufStreamEncoder(writer io.Writer) *ProtobufStreamEncoder {
 }
 
 // Write 写入对象到流
-func (e *ProtobufStreamEncoder) Write(v interface{}) error {
+func (e *ProtobufStreamEncoder) Write(v any) error {
 	if v == nil {
 		return ErrNilValue
 	}
@@ -183,7 +183,7 @@ func NewProtobufStreamDecoder(reader io.Reader) *ProtobufStreamDecoder {
 }
 
 // Read 从流读取对象
-func (d *ProtobufStreamDecoder) Read(v interface{}) error {
+func (d *ProtobufStreamDecoder) Read(v any) error {
 	if v == nil {
 		return ErrNilValue
 	}
@@ -239,7 +239,7 @@ func NewProtobufCodec() *ProtobufCodec {
 }
 
 // Encode 编码
-func (c *ProtobufCodec) Encode(v interface{}) ([]byte, error) {
+func (c *ProtobufCodec) Encode(v any) ([]byte, error) {
 	if v == nil {
 		return nil, ErrNilValue
 	}
@@ -253,7 +253,7 @@ func (c *ProtobufCodec) Encode(v interface{}) ([]byte, error) {
 }
 
 // Decode 解码
-func (c *ProtobufCodec) Decode(data []byte, v interface{}) error {
+func (c *ProtobufCodec) Decode(data []byte, v any) error {
 	if len(data) == 0 {
 		return ErrInvalidData
 	}
@@ -271,7 +271,7 @@ func (c *ProtobufCodec) Decode(data []byte, v interface{}) error {
 }
 
 // MarshalProtobuf 通用Protobuf序列化函数
-func MarshalProtobuf(v interface{}) ([]byte, error) {
+func MarshalProtobuf(v any) ([]byte, error) {
 	if v == nil {
 		return nil, ErrNilValue
 	}
@@ -285,7 +285,7 @@ func MarshalProtobuf(v interface{}) ([]byte, error) {
 }
 
 // UnmarshalProtobuf 通用Protobuf反序列化函数
-func UnmarshalProtobuf(data []byte, v interface{}) error {
+func UnmarshalProtobuf(data []byte, v any) error {
 	if len(data) == 0 {
 		return ErrInvalidData
 	}

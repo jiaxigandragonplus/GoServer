@@ -67,7 +67,7 @@ func (a *WorkerActor) HandleMessage(ctx context.Context, envelope *message.Envel
 		time.Sleep(50 * time.Millisecond)
 
 		// 回复结果
-		replyMsg := message.NewBaseMessage("work.done", map[string]interface{}{
+		replyMsg := message.NewBaseMessage("work.done", map[string]any{
 			"work_id":   a.workCount,
 			"worker":    a.Address().String(),
 			"timestamp": time.Now().Unix(),
@@ -75,7 +75,7 @@ func (a *WorkerActor) HandleMessage(ctx context.Context, envelope *message.Envel
 		return a.Reply(ctx, msg, replyMsg)
 
 	case "work.status":
-		replyMsg := message.NewBaseMessage("work.status.response", map[string]interface{}{
+		replyMsg := message.NewBaseMessage("work.status.response", map[string]any{
 			"work_count": a.workCount,
 			"is_running": a.IsRunning(),
 			"state":      a.GetState(),
@@ -128,7 +128,7 @@ func (a *SupervisorActor) HandleMessage(ctx context.Context, envelope *message.E
 			return err
 		}
 
-		replyMsg := message.NewBaseMessage("supervisor.response", map[string]interface{}{
+		replyMsg := message.NewBaseMessage("supervisor.response", map[string]any{
 			"action":   "worker_created",
 			"worker":   workerAddr.String(),
 			"children": len(a.Context().Children()),
@@ -142,7 +142,7 @@ func (a *SupervisorActor) HandleMessage(ctx context.Context, envelope *message.E
 			workers[i] = child.Address().String()
 		}
 
-		replyMsg := message.NewBaseMessage("supervisor.response", map[string]interface{}{
+		replyMsg := message.NewBaseMessage("supervisor.response", map[string]any{
 			"action":  "list_workers",
 			"workers": workers,
 			"count":   len(workers),
@@ -199,7 +199,7 @@ func exampleLifecycleHooks(ctx context.Context) {
 
 	// 发送工作消息
 	clientAddr, _ := message.NewLocalAddress("local", "/advanced/client")
-	workMsg := message.NewBaseMessage("work.do", map[string]interface{}{
+	workMsg := message.NewBaseMessage("work.do", map[string]any{
 		"task": "test_task",
 	})
 	workMsg.SetSender(clientAddr)
@@ -427,7 +427,7 @@ func exampleErrorRecovery(ctx context.Context) {
 
 	// 发送正常消息
 	clientAddr, _ := message.NewLocalAddress("local", "/recovery/client")
-	normalMsg := message.NewBaseMessage("work.do", map[string]interface{}{
+	normalMsg := message.NewBaseMessage("work.do", map[string]any{
 		"task": "normal_work",
 	})
 	normalMsg.SetSender(clientAddr)
@@ -440,7 +440,7 @@ func exampleErrorRecovery(ctx context.Context) {
 	}
 
 	// 发送错误消息
-	errorMsg := message.NewBaseMessage("work.error", map[string]interface{}{
+	errorMsg := message.NewBaseMessage("work.error", map[string]any{
 		"task": "error_work",
 	})
 	errorMsg.SetSender(clientAddr)

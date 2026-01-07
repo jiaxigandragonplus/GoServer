@@ -10,9 +10,9 @@ import (
 // Serializer 序列化器接口
 type Serializer interface {
 	// Serialize 序列化任意对象
-	Serialize(v interface{}) ([]byte, error)
+	Serialize(v any) ([]byte, error)
 	// Deserialize 反序列化到对象
-	Deserialize(data []byte, v interface{}) error
+	Deserialize(data []byte, v any) error
 	// ContentType 返回内容类型
 	ContentType() string
 	// Format 返回格式名称
@@ -22,7 +22,7 @@ type Serializer interface {
 // Encoder 编码器接口
 type Encoder interface {
 	// Encode 编码对象
-	Encode(v interface{}) error
+	Encode(v any) error
 	// Bytes 获取编码后的字节
 	Bytes() []byte
 }
@@ -30,7 +30,7 @@ type Encoder interface {
 // Decoder 解码器接口
 type Decoder interface {
 	// Decode 解码到对象
-	Decode(v interface{}) error
+	Decode(v any) error
 	// Reset 重置解码器
 	Reset(data []byte)
 }
@@ -127,7 +127,7 @@ func (r *TypeRegistry) Register(typeName string, typ reflect.Type) error {
 }
 
 // RegisterInstance 注册类型实例
-func (r *TypeRegistry) RegisterInstance(typeName string, instance interface{}) error {
+func (r *TypeRegistry) RegisterInstance(typeName string, instance any) error {
 	typ := reflect.TypeOf(instance)
 	if typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()

@@ -109,7 +109,7 @@ func (s *JSONSerializer) ContentType() string {
 // serializableMessage 可序列化的消息结构
 type serializableMessage struct {
 	Type      string            `json:"type"`
-	Data      interface{}       `json:"data"`
+	Data      any               `json:"data"`
 	Sender    string            `json:"sender,omitempty"`
 	Receiver  string            `json:"receiver,omitempty"`
 	Timestamp time.Time         `json:"timestamp"`

@@ -46,7 +46,7 @@ type ActorContext struct {
 	stats ActorStats
 
 	// 自定义数据
-	data   map[string]interface{}
+	data   map[string]any
 	dataMu sync.RWMutex
 }
 
@@ -62,7 +62,7 @@ func NewActorContext(actor Actor, parent Actor) *ActorContext {
 		cancel:              cancel,
 		supervisionStrategy: SupervisionStrategyRestart,
 		stats:               ActorStats{},
-		data:                make(map[string]interface{}),
+		data:                make(map[string]any),
 	}
 }
 
@@ -204,7 +204,7 @@ func (c *ActorContext) UpdateStats(updater func(*ActorStats)) {
 }
 
 // SetData 设置自定义数据
-func (c *ActorContext) SetData(key string, value interface{}) {
+func (c *ActorContext) SetData(key string, value any) {
 	c.dataMu.Lock()
 	defer c.dataMu.Unlock()
 
@@ -212,7 +212,7 @@ func (c *ActorContext) SetData(key string, value interface{}) {
 }
 
 // GetData 获取自定义数据
-func (c *ActorContext) GetData(key string) (interface{}, bool) {
+func (c *ActorContext) GetData(key string) (any, bool) {
 	c.dataMu.RLock()
 	defer c.dataMu.RUnlock()
 

@@ -9,9 +9,9 @@ import (
 // CustomEncoder 自定义编码器接口
 type CustomEncoder interface {
 	// Encode 编码对象
-	Encode(v interface{}) ([]byte, error)
+	Encode(v any) ([]byte, error)
 	// Decode 解码对象
-	Decode(data []byte, v interface{}) error
+	Decode(data []byte, v any) error
 	// Format 返回格式名称
 	Format() Format
 }
@@ -36,7 +36,7 @@ func NewCustomSerializer(encoder CustomEncoder, opts ...func(*Options)) *CustomS
 }
 
 // Serialize 序列化对象
-func (s *CustomSerializer) Serialize(v interface{}) ([]byte, error) {
+func (s *CustomSerializer) Serialize(v any) ([]byte, error) {
 	if v == nil {
 		return nil, ErrNilValue
 	}
@@ -44,7 +44,7 @@ func (s *CustomSerializer) Serialize(v interface{}) ([]byte, error) {
 }
 
 // Deserialize 反序列化对象
-func (s *CustomSerializer) Deserialize(data []byte, v interface{}) error {
+func (s *CustomSerializer) Deserialize(data []byte, v any) error {
 	if len(data) == 0 {
 		return ErrInvalidData
 	}
@@ -146,14 +146,14 @@ func NewMessagePackEncoder(opts ...func(*Options)) *MessagePackEncoder {
 }
 
 // Encode 编码对象为MessagePack
-func (e *MessagePackEncoder) Encode(v interface{}) ([]byte, error) {
+func (e *MessagePackEncoder) Encode(v any) ([]byte, error) {
 	// 实际实现应使用github.com/vmihailenco/msgpack
 	// 这里返回模拟数据
 	return []byte("msgpack-mock-data"), nil
 }
 
 // Decode 从MessagePack解码对象
-func (e *MessagePackEncoder) Decode(data []byte, v interface{}) error {
+func (e *MessagePackEncoder) Decode(data []byte, v any) error {
 	// 实际实现应使用github.com/vmihailenco/msgpack
 	// 这里模拟成功
 	return nil
@@ -177,14 +177,14 @@ func NewYAMLEncoder(opts ...func(*Options)) *YAMLEncoder {
 }
 
 // Encode 编码对象为YAML
-func (e *YAMLEncoder) Encode(v interface{}) ([]byte, error) {
+func (e *YAMLEncoder) Encode(v any) ([]byte, error) {
 	// 实际实现应使用gopkg.in/yaml.v3
 	// 这里返回模拟数据
 	return []byte("yaml-mock-data"), nil
 }
 
 // Decode 从YAML解码对象
-func (e *YAMLEncoder) Decode(data []byte, v interface{}) error {
+func (e *YAMLEncoder) Decode(data []byte, v any) error {
 	// 实际实现应使用gopkg.in/yaml.v3
 	// 这里模拟成功
 	return nil
@@ -208,14 +208,14 @@ func NewXMLEncoder(opts ...func(*Options)) *XMLEncoder {
 }
 
 // Encode 编码对象为XML
-func (e *XMLEncoder) Encode(v interface{}) ([]byte, error) {
+func (e *XMLEncoder) Encode(v any) ([]byte, error) {
 	// 实际实现应使用encoding/xml
 	// 这里返回模拟数据
 	return []byte("<xml>mock-data</xml>"), nil
 }
 
 // Decode 从XML解码对象
-func (e *XMLEncoder) Decode(data []byte, v interface{}) error {
+func (e *XMLEncoder) Decode(data []byte, v any) error {
 	// 实际实现应使用encoding/xml
 	// 这里模拟成功
 	return nil
@@ -240,7 +240,7 @@ func NewChainEncoder(encoders ...CustomEncoder) *ChainEncoder {
 }
 
 // Encode 使用链式编码器编码对象
-func (c *ChainEncoder) Encode(v interface{}) ([]byte, error) {
+func (c *ChainEncoder) Encode(v any) ([]byte, error) {
 	var data []byte
 	var err error
 
@@ -257,7 +257,7 @@ func (c *ChainEncoder) Encode(v interface{}) ([]byte, error) {
 }
 
 // Decode 使用链式编码器解码对象
-func (c *ChainEncoder) Decode(data []byte, v interface{}) error {
+func (c *ChainEncoder) Decode(data []byte, v any) error {
 	// 反向解码
 	for i := len(c.encoders) - 1; i >= 0; i-- {
 		encoder := c.encoders[i]
@@ -302,7 +302,7 @@ func NewTransformingEncoder(encoder CustomEncoder, transformer Transformer) *Tra
 }
 
 // Encode 编码并转换对象
-func (e *TransformingEncoder) Encode(v interface{}) ([]byte, error) {
+func (e *TransformingEncoder) Encode(v any) ([]byte, error) {
 	data, err := e.encoder.Encode(v)
 	if err != nil {
 		return nil, err
@@ -312,7 +312,7 @@ func (e *TransformingEncoder) Encode(v interface{}) ([]byte, error) {
 }
 
 // Decode 转换并解码对象
-func (e *TransformingEncoder) Decode(data []byte, v interface{}) error {
+func (e *TransformingEncoder) Decode(data []byte, v any) error {
 	transformed, err := e.transformer.Inverse(data)
 	if err != nil {
 		return err
@@ -372,15 +372,15 @@ func (t *EncryptionTransformer) Inverse(data []byte) ([]byte, error) {
 
 // CustomTypeEncoder 自定义类型编码器
 type CustomTypeEncoder struct {
-	encodeFunc func(interface{}) ([]byte, error)
-	decodeFunc func([]byte, interface{}) error
+	encodeFunc func(any) ([]byte, error)
+	decodeFunc func([]byte, any) error
 	format     Format
 }
 
 // NewCustomTypeEncoder 创建新的自定义类型编码器
 func NewCustomTypeEncoder(
-	encodeFunc func(interface{}) ([]byte, error),
-	decodeFunc func([]byte, interface{}) error,
+	encodeFunc func(any) ([]byte, error),
+	decodeFunc func([]byte, any) error,
 	format Format,
 ) *CustomTypeEncoder {
 	return &CustomTypeEncoder{
@@ -391,12 +391,12 @@ func NewCustomTypeEncoder(
 }
 
 // Encode 编码对象
-func (e *CustomTypeEncoder) Encode(v interface{}) ([]byte, error) {
+func (e *CustomTypeEncoder) Encode(v any) ([]byte, error) {
 	return e.encodeFunc(v)
 }
 
 // Decode 解码对象
-func (e *CustomTypeEncoder) Decode(data []byte, v interface{}) error {
+func (e *CustomTypeEncoder) Decode(data []byte, v any) error {
 	return e.decodeFunc(data, v)
 }
 
@@ -426,7 +426,7 @@ func (e *DynamicEncoder) Register(typ reflect.Type, encoder CustomEncoder) {
 }
 
 // Encode 动态编码对象
-func (e *DynamicEncoder) Encode(v interface{}) ([]byte, error) {
+func (e *DynamicEncoder) Encode(v any) ([]byte, error) {
 	typ := reflect.TypeOf(v)
 
 	if encoder, exists := e.encoders[typ]; exists {
@@ -437,7 +437,7 @@ func (e *DynamicEncoder) Encode(v interface{}) ([]byte, error) {
 }
 
 // Decode 动态解码对象
-func (e *DynamicEncoder) Decode(data []byte, v interface{}) error {
+func (e *DynamicEncoder) Decode(data []byte, v any) error {
 	typ := reflect.TypeOf(v)
 	if typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()

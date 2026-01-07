@@ -67,11 +67,11 @@ func DefaultAPIConfig() APIConfig {
 
 // APIResponse API响应
 type APIResponse struct {
-	Success   bool        `json:"success"`
-	Message   string      `json:"message,omitempty"`
-	Data      interface{} `json:"data,omitempty"`
-	Error     string      `json:"error,omitempty"`
-	Timestamp time.Time   `json:"timestamp"`
+	Success   bool      `json:"success"`
+	Message   string    `json:"message,omitempty"`
+	Data      any       `json:"data,omitempty"`
+	Error     string    `json:"error,omitempty"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 // ActorInfo actor信息
@@ -264,7 +264,7 @@ func (api *ManagementAPI) withMiddleware(handler http.Handler) http.Handler {
 }
 
 // writeResponse 写入JSON响应
-func (api *ManagementAPI) writeResponse(w http.ResponseWriter, status int, data interface{}) {
+func (api *ManagementAPI) writeResponse(w http.ResponseWriter, status int, data any) {
 	w.WriteHeader(status)
 	response := APIResponse{
 		Success:   status >= 200 && status < 300,
@@ -376,7 +376,7 @@ func (api *ManagementAPI) handleSystemHealth(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	response := map[string]interface{}{
+	response := map[string]any{
 		"total":     len(healthResults),
 		"healthy":   healthy,
 		"degraded":  degraded,
@@ -623,7 +623,7 @@ func (api *ManagementAPI) handleMessageTypes(w http.ResponseWriter, r *http.Requ
 func (api *ManagementAPI) handleMessageSenders(w http.ResponseWriter, r *http.Request) {
 	// 这里需要扩展MetricsCollector以提供获取所有发送者指标的方法
 	// 暂时返回空响应
-	api.writeResponse(w, http.StatusOK, map[string]interface{}{
+	api.writeResponse(w, http.StatusOK, map[string]any{
 		"message": "Not implemented yet",
 	})
 }
@@ -632,7 +632,7 @@ func (api *ManagementAPI) handleMessageSenders(w http.ResponseWriter, r *http.Re
 func (api *ManagementAPI) handleMessageReceivers(w http.ResponseWriter, r *http.Request) {
 	// 这里需要扩展MetricsCollector以提供获取所有接收者指标的方法
 	// 暂时返回空响应
-	api.writeResponse(w, http.StatusOK, map[string]interface{}{
+	api.writeResponse(w, http.StatusOK, map[string]any{
 		"message": "Not implemented yet",
 	})
 }
@@ -649,7 +649,7 @@ func (api *ManagementAPI) handleClearMetrics(w http.ResponseWriter, r *http.Requ
 func (api *ManagementAPI) handleClearHealth(w http.ResponseWriter, r *http.Request) {
 	// 这里需要扩展HealthCheckManager以提供清空结果的方法
 	// 暂时返回空响应
-	api.writeResponse(w, http.StatusOK, map[string]interface{}{
+	api.writeResponse(w, http.StatusOK, map[string]any{
 		"message": "Not implemented yet",
 	})
 }
@@ -659,7 +659,7 @@ func (api *ManagementAPI) handleCheckAll(w http.ResponseWriter, r *http.Request)
 	// 获取所有actor地址
 	actorMetrics := api.metricsCollector.GetAllActorMetrics()
 
-	results := make([]map[string]interface{}, 0, len(actorMetrics))
+	results := make([]map[string]any, 0, len(actorMetrics))
 
 	for _, metrics := range actorMetrics {
 		// 解析地址
@@ -680,7 +680,7 @@ func (api *ManagementAPI) handleCheckAll(w http.ResponseWriter, r *http.Request)
 		result, err := api.healthCheckManager.CheckActor(ctx, actor)
 		cancel()
 
-		results = append(results, map[string]interface{}{
+		results = append(results, map[string]any{
 			"address": metrics.ActorAddress,
 			"success": err == nil,
 			"result":  result,
@@ -688,7 +688,7 @@ func (api *ManagementAPI) handleCheckAll(w http.ResponseWriter, r *http.Request)
 		})
 	}
 
-	api.writeResponse(w, http.StatusOK, map[string]interface{}{
+	api.writeResponse(w, http.StatusOK, map[string]any{
 		"total":   len(results),
 		"results": results,
 	})

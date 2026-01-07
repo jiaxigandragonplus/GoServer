@@ -515,7 +515,7 @@ func testSerializerInterface(t *testing.T, serializer Serializer, expectedFormat
 	// 对于JSON和二进制序列化器，测试实际序列化
 	if serializer.Format() == FormatJSON || serializer.Format() == FormatBinary {
 		// 测试基本序列化/反序列化
-		testData := map[string]interface{}{
+		testData := map[string]any{
 			"test":   "value",
 			"number": 42,
 			"active": true,
@@ -532,7 +532,7 @@ func testSerializerInterface(t *testing.T, serializer Serializer, expectedFormat
 			return
 		}
 
-		var decodedData map[string]interface{}
+		var decodedData map[string]any
 		err = serializer.Deserialize(data, &decodedData)
 		if err != nil {
 			t.Errorf("反序列化失败: %v", err)

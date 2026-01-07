@@ -19,7 +19,7 @@ type DeadLetter struct {
 	// Timestamp 成为死信的时间
 	Timestamp time.Time
 	// Metadata 额外元数据
-	Metadata map[string]interface{}
+	Metadata map[string]any
 }
 
 // DeadLetterQueue 死信队列接口
@@ -368,7 +368,7 @@ func (m *DeadLetterManager) Submit(ctx context.Context, envelope *message.Envelo
 		Envelope:  envelope,
 		Reason:    reason,
 		Timestamp: time.Now(),
-		Metadata:  make(map[string]interface{}),
+		Metadata:  make(map[string]any),
 	}
 
 	// 添加到队列

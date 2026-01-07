@@ -209,7 +209,7 @@ func TestRouter(t *testing.T) {
 
 func TestSerialization(t *testing.T) {
 	// 创建消息
-	msg := NewBaseMessage("serialization.test", map[string]interface{}{
+	msg := NewBaseMessage("serialization.test", map[string]any{
 		"field":  "value",
 		"number": 42,
 	})

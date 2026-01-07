@@ -10,9 +10,9 @@ type Message interface {
 	// Type 返回消息类型
 	Type() string
 	// Data 返回消息数据
-	Data() interface{}
+	Data() any
 	// SetData 设置消息数据
-	SetData(data interface{})
+	SetData(data any)
 	// Sender 返回发送者地址
 	Sender() Address
 	// SetSender 设置发送者地址
@@ -158,7 +158,7 @@ func (e *Envelope) MarkAsDeadLetter(err error) {
 // BaseMessage 基础消息实现
 type BaseMessage struct {
 	msgType   string
-	data      interface{}
+	data      any
 	sender    Address
 	receiver  Address
 	timestamp time.Time
@@ -169,7 +169,7 @@ type BaseMessage struct {
 }
 
 // NewBaseMessage 创建新的基础消息
-func NewBaseMessage(msgType string, data interface{}) *BaseMessage {
+func NewBaseMessage(msgType string, data any) *BaseMessage {
 	return &BaseMessage{
 		msgType:   msgType,
 		data:      data,
@@ -185,11 +185,11 @@ func (m *BaseMessage) Type() string {
 	return m.msgType
 }
 
-func (m *BaseMessage) Data() interface{} {
+func (m *BaseMessage) Data() any {
 	return m.data
 }
 
-func (m *BaseMessage) SetData(data interface{}) {
+func (m *BaseMessage) SetData(data any) {
 	m.data = data
 }
 

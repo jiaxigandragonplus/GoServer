@@ -21,7 +21,7 @@ func NewJSONSerializer(opts ...func(*Options)) *JSONSerializer {
 }
 
 // Serialize 序列化对象为JSON
-func (s *JSONSerializer) Serialize(v interface{}) ([]byte, error) {
+func (s *JSONSerializer) Serialize(v any) ([]byte, error) {
 	if v == nil {
 		return nil, ErrNilValue
 	}
@@ -55,7 +55,7 @@ func (s *JSONSerializer) Serialize(v interface{}) ([]byte, error) {
 }
 
 // Deserialize 从JSON反序列化对象
-func (s *JSONSerializer) Deserialize(data []byte, v interface{}) error {
+func (s *JSONSerializer) Deserialize(data []byte, v any) error {
 	if len(data) == 0 {
 		return ErrInvalidData
 	}
@@ -116,7 +116,7 @@ func NewJSONEncoder(opts ...func(*Options)) *JSONEncoder {
 }
 
 // Encode 编码对象
-func (e *JSONEncoder) Encode(v interface{}) error {
+func (e *JSONEncoder) Encode(v any) error {
 	if v == nil {
 		return ErrNilValue
 	}
@@ -162,7 +162,7 @@ func NewJSONDecoder(data []byte, opts ...func(*Options)) *JSONDecoder {
 }
 
 // Decode 解码到对象
-func (d *JSONDecoder) Decode(v interface{}) error {
+func (d *JSONDecoder) Decode(v any) error {
 	if v == nil {
 		return ErrNilValue
 	}
@@ -184,19 +184,19 @@ func (d *JSONDecoder) Reset(data []byte) {
 }
 
 // MarshalJSON 通用JSON序列化函数
-func MarshalJSON(v interface{}, opts ...func(*Options)) ([]byte, error) {
+func MarshalJSON(v any, opts ...func(*Options)) ([]byte, error) {
 	serializer := NewJSONSerializer(opts...)
 	return serializer.Serialize(v)
 }
 
 // UnmarshalJSON 通用JSON反序列化函数
-func UnmarshalJSON(data []byte, v interface{}, opts ...func(*Options)) error {
+func UnmarshalJSON(data []byte, v any, opts ...func(*Options)) error {
 	serializer := NewJSONSerializer(opts...)
 	return serializer.Deserialize(data, v)
 }
 
 // PrettyJSON 格式化JSON为可读格式
-func PrettyJSON(v interface{}) ([]byte, error) {
+func PrettyJSON(v any) ([]byte, error) {
 	return MarshalJSON(v, WithIndent("  "))
 }
 
@@ -233,7 +233,7 @@ func NewJSONStreamEncoder(writer io.Writer) *JSONStreamEncoder {
 }
 
 // Write 写入对象到流
-func (e *JSONStreamEncoder) Write(v interface{}) error {
+func (e *JSONStreamEncoder) Write(v any) error {
 	if e.first {
 		e.first = false
 	} else {
@@ -257,7 +257,7 @@ func NewJSONStreamDecoder(reader io.Reader) *JSONStreamDecoder {
 }
 
 // Next 读取下一个对象
-func (d *JSONStreamDecoder) Next(v interface{}) error {
+func (d *JSONStreamDecoder) Next(v any) error {
 	return d.decoder.Decode(v)
 }
 
@@ -268,12 +268,12 @@ func (d *JSONStreamDecoder) More() bool {
 
 // JSONTypeInfo JSON类型信息
 type JSONTypeInfo struct {
-	Type  string      `json:"type"`
-	Value interface{} `json:"value"`
+	Type  string `json:"type"`
+	Value any    `json:"value"`
 }
 
 // MarshalWithType 序列化带类型信息
-func MarshalWithType(v interface{}, typeName string) ([]byte, error) {
+func MarshalWithType(v any, typeName string) ([]byte, error) {
 	info := JSONTypeInfo{
 		Type:  typeName,
 		Value: v,
@@ -282,7 +282,7 @@ func MarshalWithType(v interface{}, typeName string) ([]byte, error) {
 }
 
 // UnmarshalWithType 反序列化带类型信息
-func UnmarshalWithType(data []byte, registry *TypeRegistry) (interface{}, error) {
+func UnmarshalWithType(data []byte, registry *TypeRegistry) (any, error) {
 	var info JSONTypeInfo
 	if err := json.Unmarshal(data, &info); err != nil {
 		return nil, err

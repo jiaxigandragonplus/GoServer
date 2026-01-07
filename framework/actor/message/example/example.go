@@ -16,7 +16,7 @@ type CustomMessage struct {
 }
 
 // NewCustomMessage 创建自定义消息
-func NewCustomMessage(data interface{}, customField string) *CustomMessage {
+func NewCustomMessage(data any, customField string) *CustomMessage {
 	baseMsg := message.NewBaseMessage("custom", data)
 	return &CustomMessage{
 		BaseMessage: baseMsg,
@@ -50,7 +50,7 @@ func exampleCreateMessage() {
 	fmt.Println("\n--- 示例1: 创建消息 ---")
 
 	// 创建基础消息
-	msg := message.NewBaseMessage("user.login", map[string]interface{}{
+	msg := message.NewBaseMessage("user.login", map[string]any{
 		"username": "john_doe",
 		"password": "secret123",
 	})
@@ -183,7 +183,7 @@ func exampleMessageSerialization() {
 	fmt.Println("\n--- 示例4: 消息序列化 ---")
 
 	// 创建消息
-	msg := message.NewBaseMessage("test.serialization", map[string]interface{}{
+	msg := message.NewBaseMessage("test.serialization", map[string]any{
 		"field1": "value1",
 		"field2": 123,
 		"field3": true,

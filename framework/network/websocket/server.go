@@ -29,7 +29,7 @@ const (
 
 // WebSocketConn 表示一个 WebSocket 连接
 type WebSocketConn struct {
-	conn       interface{} // 可以是 gnet.Conn 或 net.Conn
+	conn       any // 可以是 gnet.Conn 或 net.Conn
 	isServer   bool
 	handshaked bool // 是否已完成握手
 	buffer     []byte

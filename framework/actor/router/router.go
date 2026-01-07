@@ -161,7 +161,7 @@ func (r *BaseActorRouter) Route(ctx context.Context, msg message.Message, candid
 // AddCandidate 添加候选actor
 func (r *BaseActorRouter) AddCandidate(address message.Address) error {
 	if address == nil {
-		return errors.New("address cannot be nil")
+		return errors.New("AddCandidate address cannot be nil")
 	}
 
 	addrStr := address.String()
@@ -187,7 +187,7 @@ func (r *BaseActorRouter) AddCandidate(address message.Address) error {
 // RemoveCandidate 移除候选actor
 func (r *BaseActorRouter) RemoveCandidate(address message.Address) error {
 	if address == nil {
-		return errors.New("address cannot be nil")
+		return errors.New("RemoveCandidate address cannot be nil")
 	}
 
 	addrStr := address.String()
@@ -196,7 +196,7 @@ func (r *BaseActorRouter) RemoveCandidate(address message.Address) error {
 	defer r.candidatesLock.Unlock()
 
 	if _, exists := r.candidates[addrStr]; !exists {
-		return fmt.Errorf("candidate not found: %s", addrStr)
+		return fmt.Errorf("RemoveCandidate candidate not found: %s", addrStr)
 	}
 
 	delete(r.candidates, addrStr)
@@ -305,27 +305,27 @@ func (r *BaseActorRouter) applyRoutingStrategy(ctx context.Context, msg message.
 
 	switch r.strategy {
 	case StrategyRoundRobin:
-		return r.applyRoundRobin(msg, candidates), nil
+		return r.applyRoundRobin(candidates), nil
 	case StrategyRandom:
-		return r.applyRandom(msg, candidates), nil
+		return r.applyRandom(candidates), nil
 	case StrategyHash:
 		return r.applyHash(msg, candidates), nil
 	case StrategyBroadcast:
 		return candidates, nil
 	case StrategyLeastLoaded:
-		return r.applyLeastLoaded(msg, candidates), nil
+		return r.applyLeastLoaded(candidates), nil
 	case StrategySticky:
 		return r.applySticky(msg, candidates), nil
 	case StrategyLocationAware:
 		return r.applyLocationAware(msg, candidates), nil
 	default:
 		// 默认使用轮询
-		return r.applyRoundRobin(msg, candidates), nil
+		return r.applyRoundRobin(candidates), nil
 	}
 }
 
 // applyRoundRobin 应用轮询策略
-func (r *BaseActorRouter) applyRoundRobin(msg message.Message, candidates []message.Address) []message.Address {
+func (r *BaseActorRouter) applyRoundRobin(candidates []message.Address) []message.Address {
 	if len(candidates) == 0 {
 		return []message.Address{}
 	}
@@ -340,7 +340,7 @@ func (r *BaseActorRouter) applyRoundRobin(msg message.Message, candidates []mess
 }
 
 // applyRandom 应用随机策略
-func (r *BaseActorRouter) applyRandom(msg message.Message, candidates []message.Address) []message.Address {
+func (r *BaseActorRouter) applyRandom(candidates []message.Address) []message.Address {
 	if len(candidates) == 0 {
 		return []message.Address{}
 	}
@@ -365,7 +365,7 @@ func (r *BaseActorRouter) applyHash(msg message.Message, candidates []message.Ad
 }
 
 // applyLeastLoaded 应用最小负载策略
-func (r *BaseActorRouter) applyLeastLoaded(msg message.Message, candidates []message.Address) []message.Address {
+func (r *BaseActorRouter) applyLeastLoaded(candidates []message.Address) []message.Address {
 	if len(candidates) == 0 {
 		return []message.Address{}
 	}
@@ -432,7 +432,7 @@ func (r *BaseActorRouter) applySticky(msg message.Message, candidates []message.
 	}
 
 	// 选择新的地址（使用轮询）
-	newAddr := r.applyRoundRobin(msg, candidates)[0]
+	newAddr := r.applyRoundRobin(candidates)[0]
 
 	// 更新粘性映射
 	r.stickyLock.Lock()
@@ -451,7 +451,7 @@ func (r *BaseActorRouter) applyLocationAware(msg message.Message, candidates []m
 	// 简化实现：优先选择与发送者在同一区域的候选
 	sender := msg.Sender()
 	if sender == nil {
-		return r.applyRoundRobin(msg, candidates)
+		return r.applyRoundRobin(candidates)
 	}
 
 	// 这里应该实现更复杂的位置感知逻辑

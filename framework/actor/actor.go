@@ -112,6 +112,7 @@ type BaseActor struct {
 	state      State
 	mu         sync.RWMutex
 	wg         sync.WaitGroup
+	ctx        context.Context
 	cancel     context.CancelFunc
 	createdAt  time.Time
 	startedAt  time.Time
@@ -171,6 +172,22 @@ func (a *BaseActor) Context() *ActorContext {
 	return a.context
 }
 
+// ActorContext 返回actor的上下文
+func (a *BaseActor) ActorContext() context.Context {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.ctx
+}
+
+// Cancel 取消actor的上下文
+func (a *BaseActor) Cancel() {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.cancel != nil {
+		a.cancel()
+	}
+}
+
 // Start 启动actor
 func (a *BaseActor) Start(ctx context.Context) error {
 	a.mu.Lock()
@@ -187,6 +204,7 @@ func (a *BaseActor) Start(ctx context.Context) error {
 
 	// 创建带取消的上下文
 	actorCtx, cancel := context.WithCancel(ctx)
+	a.ctx = actorCtx
 	a.cancel = cancel
 	a.running = true
 

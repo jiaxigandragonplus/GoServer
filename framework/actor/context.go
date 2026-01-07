@@ -32,10 +32,6 @@ type ActorContext struct {
 	children   map[string]Actor
 	childrenMu sync.RWMutex
 
-	// 上下文
-	ctx    context.Context
-	cancel context.CancelFunc
-
 	// 监控器
 	monitor Monitor
 
@@ -52,14 +48,10 @@ type ActorContext struct {
 
 // NewActorContext 创建新的actor上下文
 func NewActorContext(actor Actor, parent Actor) *ActorContext {
-	ctx, cancel := context.WithCancel(context.Background())
-
 	return &ActorContext{
 		actor:               actor,
 		parent:              parent,
 		children:            make(map[string]Actor),
-		ctx:                 ctx,
-		cancel:              cancel,
 		supervisionStrategy: SupervisionStrategyRestart,
 		stats:               ActorStats{},
 		data:                make(map[string]any),
@@ -88,13 +80,23 @@ func (c *ActorContext) Mailbox() mailbox.Mailbox {
 
 // Context 返回上下文
 func (c *ActorContext) Context() context.Context {
-	return c.ctx
+	// 返回关联 actor 的上下文
+	if baseActor, ok := c.actor.(interface {
+		ActorContext() context.Context
+	}); ok {
+		return baseActor.ActorContext()
+	}
+	// 如果 actor 不是 BaseActor 类型，返回 background 上下文
+	return context.Background()
 }
 
 // Cancel 取消上下文
 func (c *ActorContext) Cancel() {
-	if c.cancel != nil {
-		c.cancel()
+	// 委托给关联 actor 的 cancel 方法
+	if baseActor, ok := c.actor.(interface {
+		Cancel() // 假设 BaseActor 有 Cancel 方法
+	}); ok {
+		baseActor.Cancel()
 	}
 }
 

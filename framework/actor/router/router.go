@@ -86,15 +86,24 @@ const (
 
 // BaseActorRouter 基础actor路由器实现
 type BaseActorRouter struct {
-	candidates     map[string]CandidateStatus
+	// candidates 候选actor状态映射，key为actor地址字符串，value为候选状态
+	candidates map[string]CandidateStatus
+	// candidatesLock 保护candidates映射的读写锁，确保并发安全
 	candidatesLock sync.RWMutex
-	strategy       RoutingStrategy
-	grouping       GroupingStrategy
-	rrIndex        int
-	rrLock         sync.Mutex
-	stickySessions map[string]message.Address // 粘性会话映射
-	stickyLock     sync.RWMutex
-	customRouter   CustomRouter // 自定义路由器
+	// strategy 路由策略，决定如何从候选actor中选择目标
+	strategy RoutingStrategy
+	// grouping 分组策略，决定如何对候选actor进行分组
+	grouping GroupingStrategy
+	// rrIndex 轮询策略的当前索引，用于记录下一个选择的候选位置
+	rrIndex int
+	// rrLock 保护rrIndex的互斥锁，确保轮询索引的原子性更新
+	rrLock sync.Mutex
+	// stickySessions 粘性会话映射，key为发送者标识，value为绑定的actor地址
+	stickySessions map[string]message.Address
+	// stickyLock 保护stickySessions映射的读写锁，确保并发安全
+	stickyLock sync.RWMutex
+	// customRouter 自定义路由器接口，当使用StrategyCustom策略时使用
+	customRouter CustomRouter
 }
 
 // CustomRouter 自定义路由器接口

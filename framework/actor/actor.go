@@ -116,7 +116,6 @@ type BaseActor struct {
 	createdAt  time.Time
 	startedAt  time.Time
 	stoppedAt  time.Time
-	stats      ActorStats
 	context    *ActorContext
 }
 
@@ -149,7 +148,6 @@ func NewBaseActorWithParent(address message.Address, mailboxMgr mailbox.MailboxM
 		running:    false,
 		state:      StateCreated,
 		createdAt:  now,
-		stats:      ActorStats{},
 	}
 
 	// 创建actor上下文
@@ -390,8 +388,8 @@ func (a *BaseActor) HandleMessage(ctx context.Context, envelope *message.Envelop
 
 	// 更新统计信息
 	a.mu.Lock()
-	a.stats.MessagesProcessed++
-	a.stats.LastMessageTime = time.Now()
+	a.context.stats.MessagesProcessed++
+	a.context.stats.LastMessageTime = time.Now()
 	a.mu.Unlock()
 
 	_ = msg // 避免未使用变量警告

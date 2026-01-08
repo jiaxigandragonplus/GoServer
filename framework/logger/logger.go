@@ -3,6 +3,7 @@ package logger
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -445,35 +446,33 @@ func GetLevel() Level {
 }
 
 // 便捷函数
-
-// Debug 使用默认日志记录器记录调试级别日志
-func Debug(msg string, fields ...zap.Field) {
-	defaultLogger.Debug(msg, fields...)
+func Debug(msg string, args ...interface{}) {
+	defaultLogger.Debug(msg, Fields(args...)...)
 }
 
-// Info 使用默认日志记录器记录信息级别日志
-func Info(msg string, fields ...zap.Field) {
-	defaultLogger.Info(msg, fields...)
+// Infof 使用键值对记录信息级别日志
+func Info(msg string, args ...interface{}) {
+	defaultLogger.Info(msg, Fields(args...)...)
 }
 
-// Warn 使用默认日志记录器记录警告级别日志
-func Warn(msg string, fields ...zap.Field) {
-	defaultLogger.Warn(msg, fields...)
+// Warnf 使用键值对记录警告级别日志
+func Warn(msg string, args ...interface{}) {
+	defaultLogger.Warn(msg, Fields(args...)...)
 }
 
-// Error 使用默认日志记录器记录错误级别日志
-func Error(msg string, fields ...zap.Field) {
-	defaultLogger.Error(msg, fields...)
+// Errorf 使用键值对记录错误级别日志
+func Error(msg string, args ...interface{}) {
+	defaultLogger.Error(msg, Fields(args...)...)
 }
 
-// Fatal 使用默认日志记录器记录致命错误级别日志
-func Fatal(msg string, fields ...zap.Field) {
-	defaultLogger.Fatal(msg, fields...)
+// Fatalf 使用键值对记录致命错误级别日志
+func Fatal(msg string, args ...interface{}) {
+	defaultLogger.Fatal(msg, Fields(args...)...)
 }
 
-// With 使用默认日志记录器添加字段
-func With(fields ...zap.Field) Logger {
-	return defaultLogger.With(fields...)
+// Withf 使用键值对创建带字段的日志记录器
+func With(args ...interface{}) Logger {
+	return defaultLogger.With(Fields(args...)...)
 }
 
 // Sync 刷新默认日志记录器缓冲区
@@ -526,4 +525,77 @@ func ErrorField(err error) zap.Field {
 // Any 创建任意类型字段
 func Any(key string, value any) zap.Field {
 	return zap.Any(key, value)
+}
+
+// Fields 将键值对参数转换为zap.Field切片
+// 参数必须是偶数个，格式为：key1, value1, key2, value2, ...
+// key必须是string类型，value可以是任意类型
+func Fields(args ...interface{}) []zap.Field {
+	if len(args) == 0 {
+		return nil
+	}
+	if len(args)%2 != 0 {
+		// 参数不是偶数个，记录错误并返回空切片
+		Error("Fields参数必须是偶数个键值对", zap.Int("args_count", len(args)))
+		return nil
+	}
+
+	fields := make([]zap.Field, 0, len(args)/2)
+	for i := 0; i < len(args); i += 2 {
+		key, ok := args[i].(string)
+		if !ok {
+			// key不是string类型，记录错误并跳过
+			Error("Fields参数中key必须是string类型",
+				zap.Int("position", i),
+				zap.Any("key", args[i]),
+				zap.String("type", reflect.TypeOf(args[i]).String()))
+			continue
+		}
+		value := args[i+1]
+		fields = append(fields, convertToField(key, value))
+	}
+	return fields
+}
+
+// convertToField 将值转换为适当的zap.Field
+func convertToField(key string, value interface{}) zap.Field {
+	if value == nil {
+		return zap.Any(key, nil)
+	}
+
+	// 使用反射检查类型，选择最合适的zap函数
+	v := reflect.ValueOf(value)
+	switch v.Kind() {
+	case reflect.String:
+		return zap.String(key, v.String())
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return zap.Int64(key, v.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return zap.Uint64(key, v.Uint())
+	case reflect.Float32, reflect.Float64:
+		return zap.Float64(key, v.Float())
+	case reflect.Bool:
+		return zap.Bool(key, v.Bool())
+	case reflect.Struct:
+		// 检查是否是time.Time类型
+		if t, ok := value.(time.Time); ok {
+			return zap.Time(key, t)
+		}
+		// 检查是否是time.Duration类型
+		if d, ok := value.(time.Duration); ok {
+			return zap.Duration(key, d)
+		}
+		// 检查是否是error类型
+		if err, ok := value.(error); ok {
+			return zap.Error(err)
+		}
+		// 其他结构体使用Any
+		return zap.Any(key, value)
+	case reflect.Ptr, reflect.Interface, reflect.Slice, reflect.Map, reflect.Array:
+		// 复杂类型使用Any
+		return zap.Any(key, value)
+	default:
+		// 其他类型使用Any
+		return zap.Any(key, value)
+	}
 }

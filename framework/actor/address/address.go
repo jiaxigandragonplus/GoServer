@@ -33,7 +33,7 @@ type Protocol string
 const (
 	// ProtocolLocal 本地协议（默认，进程内通信）
 	ProtocolLocal Protocol = "local"
-	// ProtocolSystem 系统协议（框架内部使用）
+	// ProtocolSystem 系统协议（框架内部使用，用户通常不直接使用）
 	ProtocolSystem Protocol = "system"
 	// ProtocolTCP TCP协议（远程通信）
 	ProtocolTCP Protocol = "tcp"

@@ -699,6 +699,10 @@ func (cm *ClusterManager) handleMessage(msg any) error {
 	return nil
 }
 
+// func (cm *ClusterManager) GetActor(address string) (Actor, error) {
+// 	return cm.actorMgr.Get(address)
+// }
+
 // generateNodeID 生成节点ID
 func generateNodeID() string {
 	// 使用时间戳和随机数生成节点ID
@@ -715,4 +719,21 @@ func randomString(length int) string {
 		b[i] = charset[i%len(charset)]
 	}
 	return string(b)
+}
+
+var (
+	defaultClusterManager     *ClusterManager
+	defaultClusterManagerOnce sync.Once
+)
+
+func GetDefaultClusterManager() *ClusterManager {
+	defaultClusterManagerOnce.Do(func() {
+		config := DefaultConfig()
+		config.NodeName = "test-node"
+		config.Host = "localhost"
+		config.Port = 9090
+
+		defaultClusterManager, _ = NewClusterManager(config)
+	})
+	return defaultClusterManager
 }

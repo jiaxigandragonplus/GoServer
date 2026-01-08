@@ -8,11 +8,12 @@ import (
 
 func main() {
 	initLogger()
+
+	logger.Info("gate start", "timestamp", time.Now().Unix())
 }
 
 func initLogger() {
 	// 初始化日志
 	logger.InitDefaultLogger("gate", logger.DebugLevel)
-	logger.Debug("this is debug log", "timestamp", time.Now().Unix())
-	logger.Info("this is info log")
+	logger.Debug("this is debug log")
 }

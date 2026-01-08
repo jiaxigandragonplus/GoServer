@@ -248,21 +248,7 @@ func Level2ZapLevel(level Level) zapcore.Level {
 	}
 }
 
-// newLoggerWithSkip 创建新的日志实例，指定跳过层数
-func newLoggerWithSkip(cfg *Config, skip int) (Logger, error) {
-	if cfg == nil {
-		cfg = &Config{
-			Level:       InfoLevel,
-			Format:      "console",
-			Output:      "stdout",
-			Development: true,
-			Caller:      true,
-		}
-	}
-
-	// 应用环境变量配置
-	applyEnvConfig(cfg)
-
+func createTransports(cfg *Config, logLevel Level) ([]zapcore.Core, error) {
 	// 设置编码器配置
 	encoderConfig := zap.NewDevelopmentEncoderConfig()
 	if !cfg.Development {
@@ -287,11 +273,11 @@ func newLoggerWithSkip(cfg *Config, skip int) (Logger, error) {
 		encoder = zapcore.NewConsoleEncoder(encoderConfig)
 	}
 
-	// 设置日志级别
-	level := Level2ZapLevel(cfg.Level)
-
 	// 设置输出
 	var cores []zapcore.Core
+
+	// 设置日志级别
+	level := Level2ZapLevel(cfg.Level)
 
 	// 默认输出到stdout
 	writer := zapcore.Lock(os.Stdout)
@@ -313,6 +299,29 @@ func newLoggerWithSkip(cfg *Config, skip int) (Logger, error) {
 			transportCore := zapcore.NewCore(encoder, transport, level)
 			cores = append(cores, transportCore)
 		}
+	}
+
+	return cores, nil
+}
+
+// newLoggerWithSkip 创建新的日志实例，指定跳过层数
+func newLoggerWithSkip(cfg *Config, skip int) (Logger, error) {
+	if cfg == nil {
+		cfg = &Config{
+			Level:       InfoLevel,
+			Format:      "console",
+			Output:      "stdout",
+			Development: true,
+			Caller:      true,
+		}
+	}
+
+	// 应用环境变量配置
+	applyEnvConfig(cfg)
+
+	cores, err := createTransports(cfg, cfg.Level)
+	if err != nil {
+		return nil, err
 	}
 
 	if len(cores) == 0 {

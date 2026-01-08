@@ -3,7 +3,6 @@ package logger
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -11,7 +10,6 @@ import (
 	"github.com/GooLuck/GoServer/framework/logger/transports"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 // Level 定义日志级别
@@ -232,6 +230,23 @@ func createTransportFromConfig(tc *TransportConfig) (transports.Transport, error
 	return factory.Create()
 }
 
+func Level2ZapLevel(level Level) zapcore.Level {
+	switch level {
+	case DebugLevel:
+		return zap.DebugLevel
+	case InfoLevel:
+		return zap.InfoLevel
+	case WarnLevel:
+		return zap.WarnLevel
+	case ErrorLevel:
+		return zap.ErrorLevel
+	case FatalLevel:
+		return zap.FatalLevel
+	default:
+		return zap.InfoLevel
+	}
+}
+
 // newLoggerWithSkip 创建新的日志实例，指定跳过层数
 func newLoggerWithSkip(cfg *Config, skip int) (Logger, error) {
 	if cfg == nil {
@@ -272,22 +287,14 @@ func newLoggerWithSkip(cfg *Config, skip int) (Logger, error) {
 	}
 
 	// 设置日志级别
-	level := zapcore.InfoLevel
-	switch cfg.Level {
-	case DebugLevel:
-		level = zapcore.DebugLevel
-	case InfoLevel:
-		level = zapcore.InfoLevel
-	case WarnLevel:
-		level = zapcore.WarnLevel
-	case ErrorLevel:
-		level = zapcore.ErrorLevel
-	case FatalLevel:
-		level = zapcore.FatalLevel
-	}
+	level := Level2ZapLevel(cfg.Level)
 
 	// 设置输出
 	var cores []zapcore.Core
+
+	// 默认输出到stdout
+	writer := zapcore.Lock(os.Stdout)
+	cores = append(cores, zapcore.NewCore(encoder, writer, level))
 
 	// 优先使用Transports配置（新方式）
 	if len(cfg.Transports) > 0 {
@@ -305,76 +312,15 @@ func newLoggerWithSkip(cfg *Config, skip int) (Logger, error) {
 			transportCore := zapcore.NewCore(encoder, transport, level)
 			cores = append(cores, transportCore)
 		}
-	} else {
-		// 向后兼容：使用Output字段
-		// 控制台输出
-		if cfg.Output == "stdout" || cfg.Output == "stderr" || cfg.Output == "" {
-			writer := zapcore.Lock(os.Stdout)
-			if cfg.Output == "stderr" {
-				writer = zapcore.Lock(os.Stderr)
-			}
-			core := zapcore.NewCore(encoder, writer, level)
-			cores = append(cores, core)
-		}
+	}
 
-		// 文件输出
-		if cfg.Output == "file" && cfg.FilePath != "" {
-			// 确保目录存在
-			dir := filepath.Dir(cfg.FilePath)
-			if err := os.MkdirAll(dir, 0755); err != nil {
-				return nil, fmt.Errorf("create log directory failed: %w", err)
-			}
-
-			lumberjackLogger := &lumberjack.Logger{
-				Filename:   cfg.FilePath,
-				MaxSize:    cfg.MaxSize,    // MB
-				MaxBackups: cfg.MaxBackups, // 备份文件数
-				MaxAge:     cfg.MaxAge,     // 天数
-				Compress:   cfg.Compress,   // 是否压缩
-			}
-
-			writer := zapcore.AddSync(lumberjackLogger)
-			fileCore := zapcore.NewCore(encoder, writer, level)
-			cores = append(cores, fileCore)
-		}
-
-		// Transport输出
-		if cfg.Output == "transport" {
-			var transport transports.Transport
-			var err error
-
-			// 如果直接提供了Transport，使用它
-			if cfg.Transport != nil {
-				transport = cfg.Transport
-			} else if cfg.TransportName != "" {
-				// 从注册表获取传输工厂
-				factory, ok := transports.Get(cfg.TransportName)
-				if !ok {
-					return nil, fmt.Errorf("transport factory not found: %s", cfg.TransportName)
-				}
-
-				// 创建传输实例
-				transport, err = factory.Create()
-				if err != nil {
-					return nil, fmt.Errorf("create transport failed: %w", err)
-				}
-			} else {
-				return nil, fmt.Errorf("transport output requires either Transport or TransportName to be set")
-			}
-
-			// 创建core
-			transportCore := zapcore.NewCore(encoder, transport, level)
-			cores = append(cores, transportCore)
-		}
+	if len(cores) == 0 {
+		panic("empty log core")
 	}
 
 	// 创建核心
 	var core zapcore.Core
-	if len(cores) == 0 {
-		// 默认输出到stdout
-		writer := zapcore.Lock(os.Stdout)
-		core = zapcore.NewCore(encoder, writer, level)
-	} else if len(cores) == 1 {
+	if len(cores) == 1 {
 		core = cores[0]
 	} else {
 		core = zapcore.NewTee(cores...)

@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GooLuck/GoServer/framework/actor/address"
-	"github.com/GooLuck/GoServer/framework/actor/mailbox"
-	"github.com/GooLuck/GoServer/framework/actor/message"
+	"github.com/GooLuck/GoServer/framework/address"
+	"github.com/GooLuck/GoServer/framework/mailbox"
+	"github.com/GooLuck/GoServer/framework/message"
 )
 
 // HealthStatus 健康状态

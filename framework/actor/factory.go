@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/GooLuck/GoServer/framework/actor/address"
-	"github.com/GooLuck/GoServer/framework/actor/mailbox"
+	"github.com/GooLuck/GoServer/framework/address"
+	"github.com/GooLuck/GoServer/framework/mailbox"
 )
 
 // ActorFactory actor工厂接口

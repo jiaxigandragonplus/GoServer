@@ -203,7 +203,7 @@ data, err := chainEncoder.Encode(obj)
 
 ```go
 import (
-    "github.com/GooLuck/GoServer/framework/actor/message"
+    "github.com/GooLuck/GoServer/framework/message"
     "github.com/GooLuck/GoServer/framework/serialization"
 )
 

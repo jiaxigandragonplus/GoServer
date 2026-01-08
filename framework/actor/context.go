@@ -4,9 +4,9 @@ import (
 	"context"
 	"sync"
 
-	"github.com/GooLuck/GoServer/framework/actor/address"
-	"github.com/GooLuck/GoServer/framework/actor/mailbox"
-	"github.com/GooLuck/GoServer/framework/actor/message"
+	"github.com/GooLuck/GoServer/framework/address"
+	"github.com/GooLuck/GoServer/framework/mailbox"
+	"github.com/GooLuck/GoServer/framework/message"
 )
 
 // Monitor 监控器接口，用于监控actor的行为和失败

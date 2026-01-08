@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/GooLuck/GoServer/framework/logger/transports"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -28,23 +30,36 @@ const (
 	FatalLevel
 )
 
+// TransportConfig 单个传输配置
+type TransportConfig struct {
+	// Name 传输名称，用于从注册表获取传输工厂
+	Name string
+	// Enabled 是否启用该传输
+	Enabled bool
+	// Config 传输特定配置
+	Config interface{}
+	// Transport 直接提供的传输实例（如果提供，则忽略Name和Config）
+	Transport transports.Transport
+}
+
 // Config 日志配置
 type Config struct {
 	// Level 日志级别
 	Level Level
 	// Format 日志格式：json 或 console
 	Format string
-	// Output 输出目标：stdout, stderr, file
+	// Output 输出目标：stdout, stderr, file, transport (向后兼容)
+	// 当设置了Transports时，此字段将被忽略
 	Output string
-	// FilePath 日志文件路径（当Output为file时有效）
+	// FilePath 日志文件路径（当Output为file时有效，向后兼容）
 	FilePath string
-	// MaxSize 日志文件最大大小（MB）
+	// MaxSize 日志文件最大大小（MB，向后兼容）
 	MaxSize int
-	// MaxBackups 最大备份文件数
+	// MaxBackups 最大备份文件数（向后兼容）
 	MaxBackups int
-	// MaxAge 最大保存天数
+	// MaxAge 最大保存天数（向后兼容）
 	MaxAge int
-	// Compress 是否压缩备份文件
+	// Compress 是否压缩备份文件（向后兼容）
 	Compress bool
 	// Development 是否为开发模式
 	Development bool
@@ -52,6 +67,17 @@ type Config struct {
 	Caller bool
 	// Stacktrace 是否记录堆栈跟踪
 	Stacktrace bool
+	// Transports 传输配置列表，支持多个输出目标
+	Transports []*TransportConfig
+	// Transport 自定义传输，当Output为"transport"时使用（向后兼容）
+	// 如果为nil且Output为"transport"，则使用默认传输注册表
+	Transport transports.Transport
+	// TransportName 传输名称，用于从注册表获取传输工厂（向后兼容）
+	// 当Transport为nil且Output为"transport"时使用
+	TransportName string
+	// TransportConfig 传输配置，用于创建传输（向后兼容）
+	// 具体类型取决于传输类型
+	TransportConfig interface{}
 }
 
 // Logger 日志接口
@@ -97,7 +123,16 @@ func init() {
 		Development: true,
 		Caller:      true,
 		Stacktrace:  false,
+		Transports:  make([]*TransportConfig, 0),
 	}
+
+	// 写文件
+	fileTransportCfg := &TransportConfig{
+		Name:    "file",
+		Enabled: true,
+		Config:  transports.NewFileConfig(),
+	}
+	cfg.Transports = append(cfg.Transports, fileTransportCfg)
 
 	// 为默认日志记录器创建自定义配置，跳过2层调用
 	// 因为调用链是：用户代码 -> logger.Info() -> defaultLogger.Info() -> l.zap.Info()
@@ -121,6 +156,59 @@ func init() {
 	}
 }
 
+// applyEnvConfig 根据环境变量更新配置
+func applyEnvConfig(cfg *Config) {
+	// 环境变量格式：LOG_TRANSPORTS=stdout,file,kafka
+	// 或者针对单个transport：LOG_TRANSPORT_STDOUT=true, LOG_TRANSPORT_FILE=false
+	if envTransports := os.Getenv("LOG_TRANSPORTS"); envTransports != "" {
+		// 如果设置了LOG_TRANSPORTS，则根据它更新所有transport的Enabled状态
+		enabledTransports := make(map[string]bool)
+		transportsList := strings.Split(envTransports, ",")
+		for _, t := range transportsList {
+			enabledTransports[strings.TrimSpace(t)] = true
+		}
+
+		// 更新Transports配置
+		for i := range cfg.Transports {
+			cfg.Transports[i].Enabled = enabledTransports[cfg.Transports[i].Name]
+		}
+	}
+
+	// 检查单个transport的环境变量
+	for i := range cfg.Transports {
+		envVar := fmt.Sprintf("LOG_TRANSPORT_%s", strings.ToUpper(cfg.Transports[i].Name))
+		if envValue := os.Getenv(envVar); envValue != "" {
+			enabled := strings.ToLower(envValue) == "true" || envValue == "1"
+			cfg.Transports[i].Enabled = enabled
+		}
+	}
+}
+
+// createTransportFromConfig 根据TransportConfig创建传输实例
+func createTransportFromConfig(tc *TransportConfig) (transports.Transport, error) {
+	// 如果直接提供了Transport，使用它
+	if tc.Transport != nil {
+		return tc.Transport, nil
+	}
+
+	// 从注册表获取传输工厂
+	factory, ok := transports.Get(tc.Name)
+	if !ok {
+		return nil, fmt.Errorf("transport factory not found: %s", tc.Name)
+	}
+
+	// 如果工厂是FileTransportFactory，并且提供了FileConfig，则设置配置
+	if _, ok := factory.(*transports.FileTransportFactory); ok {
+		if fileConfig, ok := tc.Config.(*transports.FileConfig); ok {
+			// 创建新的工厂实例以使用提供的配置
+			factory = transports.NewFileTransportFactory(fileConfig)
+		}
+	}
+
+	// 创建传输实例
+	return factory.Create()
+}
+
 // newLoggerWithSkip 创建新的日志实例，指定跳过层数
 func newLoggerWithSkip(cfg *Config, skip int) (Logger, error) {
 	if cfg == nil {
@@ -132,6 +220,9 @@ func newLoggerWithSkip(cfg *Config, skip int) (Logger, error) {
 			Caller:      true,
 		}
 	}
+
+	// 应用环境变量配置
+	applyEnvConfig(cfg)
 
 	// 设置编码器配置
 	encoderConfig := zap.NewDevelopmentEncoderConfig()
@@ -175,35 +266,83 @@ func newLoggerWithSkip(cfg *Config, skip int) (Logger, error) {
 	// 设置输出
 	var cores []zapcore.Core
 
-	// 控制台输出
-	if cfg.Output == "stdout" || cfg.Output == "stderr" || cfg.Output == "" {
-		writer := zapcore.Lock(os.Stdout)
-		if cfg.Output == "stderr" {
-			writer = zapcore.Lock(os.Stderr)
-		}
-		core := zapcore.NewCore(encoder, writer, level)
-		cores = append(cores, core)
-	}
+	// 优先使用Transports配置（新方式）
+	if len(cfg.Transports) > 0 {
+		for _, tc := range cfg.Transports {
+			if !tc.Enabled {
+				continue
+			}
 
-	// 文件输出
-	if cfg.Output == "file" && cfg.FilePath != "" {
-		// 确保目录存在
-		dir := filepath.Dir(cfg.FilePath)
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return nil, fmt.Errorf("create log directory failed: %w", err)
+			transport, err := createTransportFromConfig(tc)
+			if err != nil {
+				return nil, fmt.Errorf("create transport %s failed: %w", tc.Name, err)
+			}
+
+			// 创建core
+			transportCore := zapcore.NewCore(encoder, transport, level)
+			cores = append(cores, transportCore)
+		}
+	} else {
+		// 向后兼容：使用Output字段
+		// 控制台输出
+		if cfg.Output == "stdout" || cfg.Output == "stderr" || cfg.Output == "" {
+			writer := zapcore.Lock(os.Stdout)
+			if cfg.Output == "stderr" {
+				writer = zapcore.Lock(os.Stderr)
+			}
+			core := zapcore.NewCore(encoder, writer, level)
+			cores = append(cores, core)
 		}
 
-		lumberjackLogger := &lumberjack.Logger{
-			Filename:   cfg.FilePath,
-			MaxSize:    cfg.MaxSize,    // MB
-			MaxBackups: cfg.MaxBackups, // 备份文件数
-			MaxAge:     cfg.MaxAge,     // 天数
-			Compress:   cfg.Compress,   // 是否压缩
+		// 文件输出
+		if cfg.Output == "file" && cfg.FilePath != "" {
+			// 确保目录存在
+			dir := filepath.Dir(cfg.FilePath)
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return nil, fmt.Errorf("create log directory failed: %w", err)
+			}
+
+			lumberjackLogger := &lumberjack.Logger{
+				Filename:   cfg.FilePath,
+				MaxSize:    cfg.MaxSize,    // MB
+				MaxBackups: cfg.MaxBackups, // 备份文件数
+				MaxAge:     cfg.MaxAge,     // 天数
+				Compress:   cfg.Compress,   // 是否压缩
+			}
+
+			writer := zapcore.AddSync(lumberjackLogger)
+			fileCore := zapcore.NewCore(encoder, writer, level)
+			cores = append(cores, fileCore)
 		}
 
-		writer := zapcore.AddSync(lumberjackLogger)
-		fileCore := zapcore.NewCore(encoder, writer, level)
-		cores = append(cores, fileCore)
+		// Transport输出
+		if cfg.Output == "transport" {
+			var transport transports.Transport
+			var err error
+
+			// 如果直接提供了Transport，使用它
+			if cfg.Transport != nil {
+				transport = cfg.Transport
+			} else if cfg.TransportName != "" {
+				// 从注册表获取传输工厂
+				factory, ok := transports.Get(cfg.TransportName)
+				if !ok {
+					return nil, fmt.Errorf("transport factory not found: %s", cfg.TransportName)
+				}
+
+				// 创建传输实例
+				transport, err = factory.Create()
+				if err != nil {
+					return nil, fmt.Errorf("create transport failed: %w", err)
+				}
+			} else {
+				return nil, fmt.Errorf("transport output requires either Transport or TransportName to be set")
+			}
+
+			// 创建core
+			transportCore := zapcore.NewCore(encoder, transport, level)
+			cores = append(cores, transportCore)
+		}
 	}
 
 	// 创建核心

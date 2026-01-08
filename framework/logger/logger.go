@@ -70,11 +70,15 @@ type Logger interface {
 	With(fields ...zap.Field) Logger
 	// Sync 刷新缓冲区
 	Sync() error
+	// SetLevel 设置日志级别
+	SetLevel(level Level) error
 }
 
 // zapLogger 基于zap的日志实现
 type zapLogger struct {
-	zap *zap.Logger
+	zap    *zap.Logger
+	config *Config
+	skip   int // 调用者跳过的层数
 }
 
 var (
@@ -102,7 +106,18 @@ func init() {
 	if err != nil {
 		// 如果初始化失败，使用fallback
 		fallbackLogger, _ := zap.NewDevelopment()
-		defaultLogger = &zapLogger{zap: fallbackLogger}
+		defaultLogger = &zapLogger{
+			zap: fallbackLogger,
+			config: &Config{
+				Level:       InfoLevel,
+				Format:      "console",
+				Output:      "stdout",
+				Development: true,
+				Caller:      true,
+				Stacktrace:  false,
+			},
+			skip: 2,
+		}
 	}
 }
 
@@ -219,7 +234,13 @@ func newLoggerWithSkip(cfg *Config, skip int) (Logger, error) {
 	// 创建zap日志器
 	zapLoggerInstance := zap.New(core, options...)
 
-	return &zapLogger{zap: zapLoggerInstance}, nil
+	// 创建配置副本
+	configCopy := *cfg
+	return &zapLogger{
+		zap:    zapLoggerInstance,
+		config: &configCopy,
+		skip:   skip,
+	}, nil
 }
 
 // NewLogger 创建新的日志实例
@@ -256,12 +277,38 @@ func (l *zapLogger) Fatal(msg string, fields ...zap.Field) {
 
 // With 添加字段到日志记录器
 func (l *zapLogger) With(fields ...zap.Field) Logger {
-	return &zapLogger{zap: l.zap.With(fields...)}
+	return &zapLogger{
+		zap:    l.zap.With(fields...),
+		config: l.config,
+		skip:   l.skip,
+	}
 }
 
 // Sync 刷新缓冲区
 func (l *zapLogger) Sync() error {
 	return l.zap.Sync()
+}
+
+// SetLevel 设置日志级别
+func (l *zapLogger) SetLevel(level Level) error {
+	// 更新配置
+	l.config.Level = level
+
+	// 重新创建logger
+	newLogger, err := newLoggerWithSkip(l.config, l.skip)
+	if err != nil {
+		return err
+	}
+
+	// 类型断言获取zapLogger
+	if newZapLogger, ok := newLogger.(*zapLogger); ok {
+		// 关闭旧的logger
+		_ = l.zap.Sync()
+		// 替换为新的
+		l.zap = newZapLogger.zap
+	}
+
+	return nil
 }
 
 // GetDefaultLogger 获取默认日志实例
@@ -272,6 +319,21 @@ func GetDefaultLogger() Logger {
 // SetDefaultLogger 设置默认日志实例
 func SetDefaultLogger(logger Logger) {
 	defaultLogger = logger
+}
+
+// SetLevel 设置默认日志记录器的日志级别
+func SetLevel(level Level) error {
+	return defaultLogger.SetLevel(level)
+}
+
+// GetLevel 获取默认日志记录器的当前日志级别
+func GetLevel() Level {
+	// 尝试通过类型断言获取配置
+	if zapLogger, ok := defaultLogger.(*zapLogger); ok {
+		return zapLogger.config.Level
+	}
+	// 如果无法获取，返回默认级别
+	return InfoLevel
 }
 
 // 便捷函数

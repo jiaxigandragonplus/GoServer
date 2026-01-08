@@ -7,6 +7,7 @@
 - 🚀 **高性能**：基于 Uber Zap，零分配内存的日志记录
 - 📊 **结构化日志**：支持丰富的字段类型和结构化输出
 - 🎯 **多级别**：Debug、Info、Warn、Error、Fatal 五个日志级别
+- 🔧 **动态级别调整**：支持运行时动态修改日志级别
 - 📝 **多格式**：支持 JSON 和控制台两种输出格式
 - 🗂️ **多输出**：支持标准输出、标准错误、文件输出
 - 🔄 **文件轮转**：集成 Lumberjack 支持日志文件轮转
@@ -154,6 +155,8 @@ type Config struct {
 | `Sync() error` | 刷新日志缓冲区 |
 | `GetDefaultLogger() Logger` | 获取默认日志记录器 |
 | `SetDefaultLogger(logger Logger)` | 设置默认日志记录器 |
+| `SetLevel(level Level) error` | 设置默认日志记录器的日志级别 |
+| `GetLevel() Level` | 获取默认日志记录器的当前日志级别 |
 
 ### 字段创建函数
 
@@ -180,6 +183,7 @@ type Logger interface {
     Fatal(msg string, fields ...zap.Field)
     With(fields ...zap.Field) Logger
     Sync() error
+    SetLevel(level Level) error  // 设置日志级别
 }
 ```
 
@@ -258,6 +262,72 @@ func setupFileLogging() {
     logger.Info("文件日志记录已配置",
         logger.String("file", "./logs/app.log"),
     )
+}
+```
+
+### 动态日志级别调整
+
+```go
+func dynamicLogLevelExample() {
+    fmt.Println("当前日志级别:", logger.GetLevel())
+    
+    // 初始设置为Info级别，Debug日志不会显示
+    logger.Info("Info日志: 这条会显示")
+    logger.Debug("Debug日志: 这条不会显示")
+    
+    // 动态设置为Debug级别
+    if err := logger.SetLevel(logger.DebugLevel); err != nil {
+        logger.Error("设置日志级别失败", logger.ErrorField(err))
+        return
+    }
+    
+    fmt.Println("已设置为Debug级别")
+    logger.Debug("Debug日志: 现在这条会显示")
+    logger.Info("Info日志: 这条也会显示")
+    
+    // 在生产环境中，可以根据需要动态调整日志级别
+    // 例如：在收到特定信号时开启Debug日志
+    go func() {
+        // 模拟收到调试信号
+        time.Sleep(2 * time.Second)
+        
+        logger.Info("收到调试信号，开启Debug日志")
+        logger.SetLevel(logger.DebugLevel)
+        
+        // 执行一些调试操作
+        logger.Debug("调试信息", logger.String("component", "database"))
+        logger.Debug("详细状态", logger.Any("state", map[string]interface{}{
+            "connections": 10,
+            "queries":     150,
+        }))
+        
+        // 一段时间后恢复为Info级别
+        time.Sleep(5 * time.Second)
+        logger.Info("调试结束，恢复Info级别")
+        logger.SetLevel(logger.InfoLevel)
+    }()
+}
+
+// 自定义logger的级别调整
+func customLoggerLevelExample() {
+    cfg := &logger.Config{
+        Level:       logger.WarnLevel,
+        Format:      "console",
+        Output:      "stdout",
+        Development: true,
+    }
+    
+    customLogger, err := logger.NewLogger(cfg)
+    if err != nil {
+        panic(err)
+    }
+    
+    customLogger.Info("Info日志: 这条不会显示（级别为Warn）")
+    customLogger.Warn("Warn日志: 这条会显示")
+    
+    // 动态调整自定义logger的级别
+    customLogger.SetLevel(logger.InfoLevel)
+    customLogger.Info("Info日志: 现在这条会显示")
 }
 ```
 

@@ -1,7 +1,12 @@
-package game
+package main
 
-import "fmt"
+import "github.com/GooLuck/GoServer/framework/logger"
 
 func main() {
-	fmt.Println("=== 创建游戏服务器 ===")
+	initLogger()
+}
+
+func initLogger() {
+	// 初始化日志
+	logger.SetLevel(logger.DebugLevel)
 }

@@ -19,7 +19,7 @@ func TestClusterCreation(t *testing.T) {
 
 	clusterMgr, err := NewClusterManager(config)
 	if err != nil {
-		t.Fatalf("Failed to create cluster manager: %v", err)
+		t.Fatalf("Failed to create cluster manager1: %v", err)
 	}
 
 	if clusterMgr == nil {
@@ -40,14 +40,14 @@ func TestClusterStartStop(t *testing.T) {
 
 	clusterMgr, err := NewClusterManager(config)
 	if err != nil {
-		t.Fatalf("Failed to create cluster manager: %v", err)
+		t.Fatalf("Failed to create cluster manager2: %v", err)
 	}
 
 	ctx := context.Background()
 
 	// 启动集群
 	if err := clusterMgr.Start(ctx); err != nil {
-		t.Fatalf("Failed to start cluster: %v", err)
+		t.Fatalf("Failed to start cluster1: %v", err)
 	}
 
 	// 检查状态
@@ -78,7 +78,7 @@ func TestClusterNodes(t *testing.T) {
 
 	clusterMgr, err := NewClusterManager(config)
 	if err != nil {
-		t.Fatalf("Failed to create cluster manager: %v", err)
+		t.Fatalf("Failed to create cluster manager2: %v", err)
 	}
 
 	ctx := context.Background()

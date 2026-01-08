@@ -65,7 +65,7 @@ func exampleSingleNode() {
 	// 创建集群管理器
 	clusterMgr, err := cluster.NewClusterManager(config)
 	if err != nil {
-		log.Fatalf("Failed to create cluster manager: %v", err)
+		log.Fatalf("Failed to create cluster manager2: %v", err)
 	}
 
 	// 启动集群
@@ -133,12 +133,12 @@ func exampleMultiNode() {
 
 	// 启动节点1
 	if err := cluster1.Start(ctx); err != nil {
-		log.Fatalf("Failed to start cluster 1: %v", err)
+		log.Fatalf("cluster1 Failed to start cluster 1: %v", err)
 	}
 
 	// 启动节点2
 	if err := cluster2.Start(ctx); err != nil {
-		log.Fatalf("Failed to start cluster 2: %v", err)
+		log.Fatalf("cluster2 Failed to start cluster 2: %v", err)
 	}
 
 	// 节点2加入集群
@@ -243,7 +243,7 @@ func exampleBroadcast() {
 
 	// 启动集群
 	if err := clusterMgr.Start(ctx); err != nil {
-		log.Fatalf("Failed to start cluster: %v", err)
+		log.Fatalf("Failed to start cluster2: %v", err)
 	}
 
 	// 创建广播消息
@@ -283,7 +283,7 @@ func exampleConsensus() {
 
 	// 启动集群
 	if err := clusterMgr.Start(ctx); err != nil {
-		log.Fatalf("Failed to start cluster: %v", err)
+		log.Fatalf("clusterMgr Failed to start cluster: %v", err)
 	}
 
 	// 获取集群状态

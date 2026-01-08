@@ -12,6 +12,12 @@ import (
 	"github.com/GooLuck/GoServer/framework/actor/address"
 )
 
+// 错误消息常量
+const (
+	errAddressRequired = "Address is required"
+	errActorNotFound   = "Actor not found"
+)
+
 // ManagementAPI 管理API服务
 type ManagementAPI struct {
 	mu sync.RWMutex
@@ -428,14 +434,14 @@ func (api *ManagementAPI) handleListActors(w http.ResponseWriter, r *http.Reques
 func (api *ManagementAPI) handleGetActor(w http.ResponseWriter, r *http.Request) {
 	address := r.PathValue("address")
 	if address == "" {
-		api.writeError(w, http.StatusBadRequest, "Address is required")
+		api.writeError(w, http.StatusBadRequest, errAddressRequired)
 		return
 	}
 
 	// 获取actor指标
 	metrics, exists := api.metricsCollector.GetActorMetrics(address)
 	if !exists {
-		api.writeError(w, http.StatusNotFound, "Actor not found")
+		api.writeError(w, http.StatusNotFound, "Actor not found1")
 		return
 	}
 
@@ -463,14 +469,14 @@ func (api *ManagementAPI) handleGetActor(w http.ResponseWriter, r *http.Request)
 func (api *ManagementAPI) handleRestartActor(w http.ResponseWriter, r *http.Request) {
 	addr := r.PathValue("address")
 	if addr == "" {
-		api.writeError(w, http.StatusBadRequest, "Address is required")
+		api.writeError(w, http.StatusBadRequest, errAddressRequired)
 		return
 	}
 
 	// 解析地址
 	addrObj, err := address.ParseAddress(addr)
 	if err != nil {
-		api.writeError(w, http.StatusBadRequest, fmt.Sprintf("Invalid address: %v", err))
+		api.writeError(w, http.StatusBadRequest, fmt.Sprintf("Invalid address2: %v", err))
 		return
 	}
 
@@ -478,7 +484,7 @@ func (api *ManagementAPI) handleRestartActor(w http.ResponseWriter, r *http.Requ
 	actorMgr := actor.GetDefaultActorManager()
 	actor, err := actorMgr.Get(addrObj)
 	if err != nil {
-		api.writeError(w, http.StatusNotFound, "Actor not found")
+		api.writeError(w, http.StatusNotFound, errActorNotFound)
 		return
 	}
 
@@ -510,7 +516,7 @@ func (api *ManagementAPI) handleRestartActor(w http.ResponseWriter, r *http.Requ
 func (api *ManagementAPI) handleStopActor(w http.ResponseWriter, r *http.Request) {
 	addr := r.PathValue("address")
 	if addr == "" {
-		api.writeError(w, http.StatusBadRequest, "Address is required")
+		api.writeError(w, http.StatusBadRequest, errAddressRequired)
 		return
 	}
 
@@ -525,7 +531,7 @@ func (api *ManagementAPI) handleStopActor(w http.ResponseWriter, r *http.Request
 	actorMgr := actor.GetDefaultActorManager()
 	actor, err := actorMgr.Get(addrObj)
 	if err != nil {
-		api.writeError(w, http.StatusNotFound, "Actor not found")
+		api.writeError(w, http.StatusNotFound, errActorNotFound)
 		return
 	}
 
@@ -545,7 +551,7 @@ func (api *ManagementAPI) handleStopActor(w http.ResponseWriter, r *http.Request
 func (api *ManagementAPI) handleStartActor(w http.ResponseWriter, r *http.Request) {
 	addr := r.PathValue("address")
 	if addr == "" {
-		api.writeError(w, http.StatusBadRequest, "Address is required")
+		api.writeError(w, http.StatusBadRequest, errAddressRequired)
 		return
 	}
 
@@ -560,7 +566,7 @@ func (api *ManagementAPI) handleStartActor(w http.ResponseWriter, r *http.Reques
 	actorMgr := actor.GetDefaultActorManager()
 	actor, err := actorMgr.Get(addrObj)
 	if err != nil {
-		api.writeError(w, http.StatusNotFound, "Actor not found")
+		api.writeError(w, http.StatusNotFound, errActorNotFound)
 		return
 	}
 
@@ -583,7 +589,7 @@ func (api *ManagementAPI) handleStartActor(w http.ResponseWriter, r *http.Reques
 func (api *ManagementAPI) handleActorMetrics(w http.ResponseWriter, r *http.Request) {
 	address := r.PathValue("address")
 	if address == "" {
-		api.writeError(w, http.StatusBadRequest, "Address is required")
+		api.writeError(w, http.StatusBadRequest, errAddressRequired)
 		return
 	}
 
@@ -600,7 +606,7 @@ func (api *ManagementAPI) handleActorMetrics(w http.ResponseWriter, r *http.Requ
 func (api *ManagementAPI) handleActorHealth(w http.ResponseWriter, r *http.Request) {
 	address := r.PathValue("address")
 	if address == "" {
-		api.writeError(w, http.StatusBadRequest, "Address is required")
+		api.writeError(w, http.StatusBadRequest, errAddressRequired)
 		return
 	}
 
@@ -624,7 +630,7 @@ func (api *ManagementAPI) handleMessageSenders(w http.ResponseWriter, r *http.Re
 	// 这里需要扩展MetricsCollector以提供获取所有发送者指标的方法
 	// 暂时返回空响应
 	api.writeResponse(w, http.StatusOK, map[string]any{
-		"message": "Not implemented yet",
+		"message": "Not implemented yet2",
 	})
 }
 

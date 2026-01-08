@@ -89,7 +89,7 @@ func (r *ActorRegistry) Unregister(actorType string) error {
 	defer r.mu.Unlock()
 
 	if _, exists := r.factories[actorType]; !exists {
-		return &ActorError{"actor factory not found: " + actorType}
+		return &ActorError{"Unregister actor factory not found: " + actorType}
 	}
 
 	delete(r.factories, actorType)

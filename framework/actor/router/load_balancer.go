@@ -153,7 +153,7 @@ func (lb *BaseLoadBalancer) Select(ctx context.Context, msg message.Message, can
 // UpdateMetrics 更新指标
 func (lb *BaseLoadBalancer) UpdateMetrics(address address.Address, metrics LoadMetrics) error {
 	if address == nil {
-		return errors.New("address cannot be nil")
+		return errors.New("UpdateMetrics address cannot be nil")
 	}
 
 	addrStr := address.String()
@@ -180,7 +180,7 @@ func (lb *BaseLoadBalancer) UpdateMetrics(address address.Address, metrics LoadM
 // GetMetrics 获取指标
 func (lb *BaseLoadBalancer) GetMetrics(address address.Address) (LoadMetrics, error) {
 	if address == nil {
-		return LoadMetrics{}, errors.New("address cannot be nil")
+		return LoadMetrics{}, errors.New("GetMetrics address cannot be nil")
 	}
 
 	addrStr := address.String()

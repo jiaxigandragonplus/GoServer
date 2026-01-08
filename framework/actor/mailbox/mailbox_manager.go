@@ -70,7 +70,7 @@ func NewDefaultMailboxManager() *DefaultMailboxManager {
 // CreateMailbox 创建邮箱
 func (m *DefaultMailboxManager) CreateMailbox(address address.Address, config Config) (Mailbox, error) {
 	if address == nil {
-		return nil, errors.New("address cannot be nil")
+		return nil, errors.New("address cannot be nil when CreateMailbox")
 	}
 
 	addrStr := address.String()
@@ -79,7 +79,7 @@ func (m *DefaultMailboxManager) CreateMailbox(address address.Address, config Co
 	defer m.mu.Unlock()
 
 	if m.closed {
-		return nil, errors.New("mailbox manager is closed")
+		return nil, errors.New("mailbox manager is closed when CreateMailbox")
 	}
 
 	if _, exists := m.mailboxes[addrStr]; exists {
@@ -101,7 +101,7 @@ func (m *DefaultMailboxManager) CreateMailbox(address address.Address, config Co
 // GetMailbox 获取邮箱
 func (m *DefaultMailboxManager) GetMailbox(address address.Address) (Mailbox, error) {
 	if address == nil {
-		return nil, errors.New("address cannot be nil")
+		return nil, errors.New("address cannot be nil at GetMailbox")
 	}
 
 	addrStr := address.String()
@@ -110,7 +110,7 @@ func (m *DefaultMailboxManager) GetMailbox(address address.Address) (Mailbox, er
 	defer m.mu.RUnlock()
 
 	if m.closed {
-		return nil, errors.New("mailbox manager is closed")
+		return nil, errors.New("mailbox manager is closed at GetMailbox")
 	}
 
 	mailbox, exists := m.mailboxes[addrStr]

@@ -32,7 +32,7 @@ func TestMailboxManagerCreateAndGet(t *testing.T) {
 	// 创建地址
 	addr, err := address.NewLocalAddress("local", "/test/actor")
 	if err != nil {
-		t.Fatalf("failed to create address: %v", err)
+		t.Fatalf("failed to create address1: %v", err)
 	}
 
 	// 创建邮箱配置
@@ -76,7 +76,7 @@ func TestMailboxManagerDuplicateCreate(t *testing.T) {
 
 	addr, err := address.NewLocalAddress("local", "/test/actor")
 	if err != nil {
-		t.Fatalf("failed to create address: %v", err)
+		t.Fatalf("failed to create address2: %v", err)
 	}
 
 	config := Config{

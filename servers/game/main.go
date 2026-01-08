@@ -8,5 +8,5 @@ func main() {
 
 func initLogger() {
 	// 初始化日志
-	logger.SetLevel(logger.DebugLevel)
+	logger.InitDefaultLogger("game", logger.DebugLevel)
 }

@@ -8,7 +8,7 @@ func main() {
 
 func initLogger() {
 	// 初始化日志
-	logger.SetLevel(logger.DebugLevel)
+	logger.InitDefaultLogger("gate", logger.DebugLevel)
 	logger.Debug("this is debug log")
 	logger.Info("this is info log")
 }

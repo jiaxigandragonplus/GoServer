@@ -31,9 +31,9 @@ type FileConfig struct {
 }
 
 // 创建一个默认的文件传输配置
-func NewFileConfig() *FileConfig {
+func NewFileConfig(fileName string) *FileConfig {
 	return &FileConfig{
-		FilePath:         "logs/app.log",
+		FilePath:         fmt.Sprintf("logs/%s.log", fileName),
 		MaxSize:          100,
 		MaxBackups:       10,
 		MaxAge:           30,

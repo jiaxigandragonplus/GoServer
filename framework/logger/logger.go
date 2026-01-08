@@ -102,22 +102,43 @@ type Logger interface {
 
 // zapLogger 基于zap的日志实现
 type zapLogger struct {
-	zap    *zap.Logger
-	config *Config
-	skip   int // 调用者跳过的层数
+	logType string // 日志名字
+	zap     *zap.Logger
+	config  *Config
+	skip    int // 调用者跳过的层数
 }
 
 var (
 	// defaultLogger 默认日志实例
 	defaultLogger Logger
+	loggers       map[string]Logger
 	once          sync.Once
 )
 
 // init 初始化默认日志配置
 func init() {
-	// 使用默认配置初始化
+	defaultLogger, _ = createLogger("default", InfoLevel)
+}
+
+func InitDefaultLogger(logType string, logLevel Level) {
+	defaultLogger, _ = createLogger(logType, logLevel)
+}
+
+func GetLogger(logType string) Logger {
+	if loggers == nil {
+		loggers = make(map[string]Logger)
+	}
+	if loggers[logType] == nil {
+		// 创建新logger
+		logLevel := DebugLevel
+		loggers[logType], _ = createLogger(logType, logLevel)
+	}
+	return loggers[logType]
+}
+
+func createLogger(loggerType string, logLevel Level) (Logger, error) {
 	cfg := &Config{
-		Level:       InfoLevel,
+		Level:       logLevel,
 		Format:      "console",
 		Output:      "stdout",
 		Development: true,
@@ -130,14 +151,14 @@ func init() {
 	fileTransportCfg := &TransportConfig{
 		Name:    "file",
 		Enabled: true,
-		Config:  transports.NewFileConfig(),
+		Config:  transports.NewFileConfig(loggerType),
 	}
 	cfg.Transports = append(cfg.Transports, fileTransportCfg)
 
 	// 为默认日志记录器创建自定义配置，跳过2层调用
 	// 因为调用链是：用户代码 -> logger.Info() -> defaultLogger.Info() -> l.zap.Info()
 	var err error
-	defaultLogger, err = newLoggerWithSkip(cfg, 2)
+	newLogger, err := newLoggerWithSkip(cfg, 2)
 	if err != nil {
 		// 如果初始化失败，使用fallback
 		fallbackLogger, _ := zap.NewDevelopment()
@@ -154,6 +175,8 @@ func init() {
 			skip: 2,
 		}
 	}
+
+	return newLogger, nil
 }
 
 // applyEnvConfig 根据环境变量更新配置

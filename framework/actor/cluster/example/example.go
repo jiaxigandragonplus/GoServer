@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/GooLuck/GoServer/framework/actor"
+	"github.com/GooLuck/GoServer/framework/actor/address"
 	"github.com/GooLuck/GoServer/framework/actor/cluster"
 	"github.com/GooLuck/GoServer/framework/actor/message"
 	"github.com/GooLuck/GoServer/framework/logger"
@@ -20,7 +21,7 @@ type ClusterActor struct {
 
 // NewClusterActor 创建新的集群actor
 func NewClusterActor(name string) (*ClusterActor, error) {
-	addr, err := message.NewLocalActorAddress(fmt.Sprintf("/cluster/%s", name))
+	addr, err := address.NewLocalActorAddress(fmt.Sprintf("/cluster/%s", name))
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +195,7 @@ func exampleRemoteMessage() {
 	}
 
 	// 创建接收者actor地址（模拟远程地址）
-	receiverAddr, err := message.ParseAddress("tcp://localhost:8082/cluster/receiver")
+	receiverAddr, err := address.ParseAddress("tcp://localhost:8082/cluster/receiver")
 	if err != nil {
 		log.Fatalf("Failed to parse remote address: %v", err)
 	}

@@ -5,16 +5,16 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/GooLuck/GoServer/framework/actor/address"
 	"github.com/GooLuck/GoServer/framework/actor/mailbox"
-	"github.com/GooLuck/GoServer/framework/actor/message"
 )
 
 // ActorFactory actor工厂接口
 type ActorFactory interface {
 	// Create 创建actor实例
-	Create(address message.Address) (Actor, error)
+	Create(address address.Address) (Actor, error)
 	// CreateWithParent 创建actor实例（指定父actor）
-	CreateWithParent(address message.Address, parent Actor) (Actor, error)
+	CreateWithParent(address address.Address, parent Actor) (Actor, error)
 	// ActorType 返回actor类型
 	ActorType() string
 }
@@ -22,11 +22,11 @@ type ActorFactory interface {
 // BaseActorFactory 基础actor工厂
 type BaseActorFactory struct {
 	actorType string
-	creator   func(address message.Address, parent Actor) (Actor, error)
+	creator   func(address address.Address, parent Actor) (Actor, error)
 }
 
 // NewBaseActorFactory 创建新的基础actor工厂
-func NewBaseActorFactory(actorType string, creator func(address message.Address, parent Actor) (Actor, error)) *BaseActorFactory {
+func NewBaseActorFactory(actorType string, creator func(address address.Address, parent Actor) (Actor, error)) *BaseActorFactory {
 	return &BaseActorFactory{
 		actorType: actorType,
 		creator:   creator,
@@ -34,12 +34,12 @@ func NewBaseActorFactory(actorType string, creator func(address message.Address,
 }
 
 // Create 创建actor实例
-func (f *BaseActorFactory) Create(address message.Address) (Actor, error) {
+func (f *BaseActorFactory) Create(address address.Address) (Actor, error) {
 	return f.creator(address, nil)
 }
 
 // CreateWithParent 创建actor实例（指定父actor）
-func (f *BaseActorFactory) CreateWithParent(address message.Address, parent Actor) (Actor, error) {
+func (f *BaseActorFactory) CreateWithParent(address address.Address, parent Actor) (Actor, error) {
 	return f.creator(address, parent)
 }
 
@@ -97,7 +97,7 @@ func (r *ActorRegistry) Unregister(actorType string) error {
 }
 
 // Create 创建actor
-func (r *ActorRegistry) Create(actorType string, address message.Address) (Actor, error) {
+func (r *ActorRegistry) Create(actorType string, address address.Address) (Actor, error) {
 	r.mu.RLock()
 	factory, exists := r.factories[actorType]
 	r.mu.RUnlock()
@@ -110,7 +110,7 @@ func (r *ActorRegistry) Create(actorType string, address message.Address) (Actor
 }
 
 // CreateWithParent 创建actor（指定父actor）
-func (r *ActorRegistry) CreateWithParent(actorType string, address message.Address, parent Actor) (Actor, error) {
+func (r *ActorRegistry) CreateWithParent(actorType string, address address.Address, parent Actor) (Actor, error) {
 	r.mu.RLock()
 	factory, exists := r.factories[actorType]
 	r.mu.RUnlock()
@@ -147,7 +147,7 @@ func (r *ActorRegistry) FactoryTypes() []string {
 // ActorBuilder actor构建器
 type ActorBuilder struct {
 	actorType   string
-	address     message.Address
+	address     address.Address
 	parent      Actor
 	mailboxMgr  mailbox.MailboxManager
 	mailboxConf mailbox.Config
@@ -167,7 +167,7 @@ func NewActorBuilder(actorType string) *ActorBuilder {
 }
 
 // WithAddress 设置地址
-func (b *ActorBuilder) WithAddress(address message.Address) *ActorBuilder {
+func (b *ActorBuilder) WithAddress(address address.Address) *ActorBuilder {
 	b.address = address
 	return b
 }
@@ -289,7 +289,7 @@ func (s *ActorSystem) SetMailboxManager(mgr mailbox.MailboxManager) {
 }
 
 // CreateActor 创建actor
-func (s *ActorSystem) CreateActor(actorType string, address message.Address) (Actor, error) {
+func (s *ActorSystem) CreateActor(actorType string, address address.Address) (Actor, error) {
 	actor, err := s.registry.Create(actorType, address)
 	if err != nil {
 		return nil, err
@@ -304,7 +304,7 @@ func (s *ActorSystem) CreateActor(actorType string, address message.Address) (Ac
 }
 
 // CreateActorWithParent 创建actor（指定父actor）
-func (s *ActorSystem) CreateActorWithParent(actorType string, address message.Address, parent Actor) (Actor, error) {
+func (s *ActorSystem) CreateActorWithParent(actorType string, address address.Address, parent Actor) (Actor, error) {
 	actor, err := s.registry.CreateWithParent(actorType, address, parent)
 	if err != nil {
 		return nil, err
@@ -330,7 +330,7 @@ func (s *ActorSystem) CreateActorWithParent(actorType string, address message.Ad
 }
 
 // StartActor 创建并启动actor
-func (s *ActorSystem) StartActor(ctx context.Context, actorType string, address message.Address) (Actor, error) {
+func (s *ActorSystem) StartActor(ctx context.Context, actorType string, address address.Address) (Actor, error) {
 	actor, err := s.CreateActor(actorType, address)
 	if err != nil {
 		return nil, err
@@ -346,7 +346,7 @@ func (s *ActorSystem) StartActor(ctx context.Context, actorType string, address 
 }
 
 // StopActor 停止actor
-func (s *ActorSystem) StopActor(address message.Address) error {
+func (s *ActorSystem) StopActor(address address.Address) error {
 	actor, err := s.manager.Get(address)
 	if err != nil {
 		return err
@@ -376,7 +376,7 @@ func GetDefaultActorRegistry() *ActorRegistry {
 		defaultActorRegistry = NewActorRegistry()
 
 		// 注册基础actor工厂
-		defaultActorRegistry.Register(NewBaseActorFactory("base", func(address message.Address, parent Actor) (Actor, error) {
+		defaultActorRegistry.Register(NewBaseActorFactory("base", func(address address.Address, parent Actor) (Actor, error) {
 			return NewBaseActorWithParent(address, nil, parent)
 		}))
 	})
@@ -396,16 +396,16 @@ func NewReflectActorFactory(actorType reflect.Type) *ReflectActorFactory {
 }
 
 // Create 创建actor实例
-func (f *ReflectActorFactory) Create(address message.Address) (Actor, error) {
+func (f *ReflectActorFactory) Create(address address.Address) (Actor, error) {
 	return f.create(address, nil)
 }
 
 // CreateWithParent 创建actor实例（指定父actor）
-func (f *ReflectActorFactory) CreateWithParent(address message.Address, parent Actor) (Actor, error) {
+func (f *ReflectActorFactory) CreateWithParent(address address.Address, parent Actor) (Actor, error) {
 	return f.create(address, parent)
 }
 
-func (f *ReflectActorFactory) create(address message.Address, parent Actor) (Actor, error) {
+func (f *ReflectActorFactory) create(address address.Address, parent Actor) (Actor, error) {
 	// 检查类型是否实现了Actor接口
 	actorInterface := reflect.TypeOf((*Actor)(nil)).Elem()
 	if !f.actorType.Implements(actorInterface) {

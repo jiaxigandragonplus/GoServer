@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/GooLuck/GoServer/framework/actor"
+	"github.com/GooLuck/GoServer/framework/actor/address"
 	"github.com/GooLuck/GoServer/framework/actor/mailbox"
 	"github.com/GooLuck/GoServer/framework/actor/message"
 )
@@ -326,7 +327,7 @@ func (d *MessageRetryDecorator) HandleMessage(ctx context.Context, envelope *mes
 }
 
 // Address 返回actor地址
-func (d *MessageRetryDecorator) Address() message.Address {
+func (d *MessageRetryDecorator) Address() address.Address {
 	return d.actor.Address()
 }
 

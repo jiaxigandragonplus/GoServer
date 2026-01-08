@@ -6,12 +6,14 @@ import (
 	"hash/fnv"
 	"sync"
 	"time"
+
+	"github.com/GooLuck/GoServer/framework/actor/address"
 )
 
 // Router 消息路由器接口
 type Router interface {
 	// Route 路由消息到目标地址
-	Route(ctx context.Context, msg Message) ([]Address, error)
+	Route(ctx context.Context, msg Message) ([]address.Address, error)
 	// AddRoute 添加路由规则
 	AddRoute(rule RouteRule) error
 	// RemoveRoute 移除路由规则
@@ -29,7 +31,7 @@ type RouteRule struct {
 	// Pattern 匹配模式
 	Pattern string
 	// Targets 目标地址列表
-	Targets []Address
+	Targets []address.Address
 	// Strategy 路由策略
 	Strategy RoutingStrategy
 	// Priority 规则优先级
@@ -73,7 +75,7 @@ func NewBaseRouter() *BaseRouter {
 }
 
 // Route 路由消息
-func (r *BaseRouter) Route(ctx context.Context, msg Message) ([]Address, error) {
+func (r *BaseRouter) Route(ctx context.Context, msg Message) ([]address.Address, error) {
 	r.rulesLock.RLock()
 	defer r.rulesLock.RUnlock()
 
@@ -89,7 +91,7 @@ func (r *BaseRouter) Route(ctx context.Context, msg Message) ([]Address, error) 
 	sortRulesByPriority(matchedRules)
 
 	// 应用规则
-	var targets []Address
+	var targets []address.Address
 	for _, rule := range matchedRules {
 		ruleTargets, err := r.applyStrategy(rule, msg)
 		if err != nil {
@@ -168,7 +170,7 @@ func (r *BaseRouter) matchRule(rule RouteRule, msg Message) bool {
 }
 
 // applyStrategy 应用路由策略
-func (r *BaseRouter) applyStrategy(rule RouteRule, msg Message) ([]Address, error) {
+func (r *BaseRouter) applyStrategy(rule RouteRule, msg Message) ([]address.Address, error) {
 	switch rule.Strategy {
 	case StrategyBroadcast:
 		return rule.Targets, nil
@@ -188,7 +190,7 @@ func (r *BaseRouter) applyStrategy(rule RouteRule, msg Message) ([]Address, erro
 }
 
 // applyRoundRobin 应用轮询策略
-func (r *BaseRouter) applyRoundRobin(rule RouteRule, msg Message) []Address {
+func (r *BaseRouter) applyRoundRobin(rule RouteRule, msg Message) []address.Address {
 	r.rrLock.Lock()
 	defer r.rrLock.Unlock()
 
@@ -197,44 +199,44 @@ func (r *BaseRouter) applyRoundRobin(rule RouteRule, msg Message) []Address {
 	target := rule.Targets[index]
 	r.rrIndex[indexKey] = (index + 1) % len(rule.Targets)
 
-	return []Address{target}
+	return []address.Address{target}
 }
 
 // applyRandom 应用随机策略
-func (r *BaseRouter) applyRandom(rule RouteRule, msg Message) []Address {
+func (r *BaseRouter) applyRandom(rule RouteRule, msg Message) []address.Address {
 	// 简化实现：使用时间戳作为随机源
 	index := time.Now().UnixNano() % int64(len(rule.Targets))
-	return []Address{rule.Targets[index]}
+	return []address.Address{rule.Targets[index]}
 }
 
 // applyHash 应用哈希策略
-func (r *BaseRouter) applyHash(rule RouteRule, msg Message) []Address {
+func (r *BaseRouter) applyHash(rule RouteRule, msg Message) []address.Address {
 	// 使用消息ID进行哈希
 	h := fnv.New32a()
 	h.Write([]byte(msg.ID()))
 	hash := h.Sum32()
 	index := int(hash % uint32(len(rule.Targets)))
-	return []Address{rule.Targets[index]}
+	return []address.Address{rule.Targets[index]}
 }
 
 // applyPriority 应用优先级策略
-func (r *BaseRouter) applyPriority(rule RouteRule, msg Message) []Address {
+func (r *BaseRouter) applyPriority(rule RouteRule, msg Message) []address.Address {
 	// 简化实现：返回第一个目标
 	// 实际应用中可以根据目标的状态、负载等确定优先级
 	if len(rule.Targets) > 0 {
-		return []Address{rule.Targets[0]}
+		return []address.Address{rule.Targets[0]}
 	}
-	return []Address{}
+	return []address.Address{}
 }
 
 // applyFirstAvailable 应用第一个可用策略
-func (r *BaseRouter) applyFirstAvailable(rule RouteRule, msg Message) []Address {
+func (r *BaseRouter) applyFirstAvailable(rule RouteRule, msg Message) []address.Address {
 	// 简化实现：返回第一个目标
 	// 实际应用中应该检查目标是否可用
 	if len(rule.Targets) > 0 {
-		return []Address{rule.Targets[0]}
+		return []address.Address{rule.Targets[0]}
 	}
-	return []Address{}
+	return []address.Address{}
 }
 
 // sortRulesByPriority 按优先级排序规则
@@ -249,9 +251,9 @@ func sortRulesByPriority(rules []RouteRule) {
 }
 
 // deduplicateAddresses 地址去重
-func deduplicateAddresses(addresses []Address) []Address {
+func deduplicateAddresses(addresses []address.Address) []address.Address {
 	seen := make(map[string]bool)
-	result := make([]Address, 0, len(addresses))
+	result := make([]address.Address, 0, len(addresses))
 
 	for _, addr := range addresses {
 		if addr == nil {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/GooLuck/GoServer/framework/actor/address"
 	"github.com/GooLuck/GoServer/framework/actor/message"
 	"github.com/GooLuck/GoServer/framework/actor/router"
 )
@@ -34,7 +35,7 @@ func (a *SimpleAddress) Path() string {
 	return "/actors/" + a.id
 }
 
-func (a *SimpleAddress) Equal(other message.Address) bool {
+func (a *SimpleAddress) Equal(other address.Address) bool {
 	if other == nil {
 		return false
 	}
@@ -70,7 +71,7 @@ func exampleBasicRouting() {
 	ctx := context.Background()
 
 	// 创建候选地址
-	candidates := []message.Address{
+	candidates := []address.Address{
 		&SimpleAddress{id: "actor1"},
 		&SimpleAddress{id: "actor2"},
 		&SimpleAddress{id: "actor3"},

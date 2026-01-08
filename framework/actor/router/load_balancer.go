@@ -10,25 +10,26 @@ import (
 	"sync"
 	"time"
 
+	"github.com/GooLuck/GoServer/framework/actor/address"
 	"github.com/GooLuck/GoServer/framework/actor/message"
 )
 
 // LoadBalancer 负载均衡器接口
 type LoadBalancer interface {
 	// Select 从候选列表中选择一个或多个地址
-	Select(ctx context.Context, msg message.Message, candidates []CandidateStatus) ([]message.Address, error)
+	Select(ctx context.Context, msg message.Message, candidates []CandidateStatus) ([]address.Address, error)
 	// UpdateMetrics 更新候选节点的指标
-	UpdateMetrics(address message.Address, metrics LoadMetrics) error
+	UpdateMetrics(address address.Address, metrics LoadMetrics) error
 	// GetMetrics 获取候选节点的指标
-	GetMetrics(address message.Address) (LoadMetrics, error)
+	GetMetrics(address address.Address) (LoadMetrics, error)
 	// HealthCheck 健康检查
-	HealthCheck(ctx context.Context, address message.Address) (bool, error)
+	HealthCheck(ctx context.Context, address address.Address) (bool, error)
 }
 
 // LoadMetrics 负载指标
 type LoadMetrics struct {
 	// Address 节点地址
-	Address message.Address
+	Address address.Address
 	// CPUUsage CPU使用率（0-100）
 	CPUUsage float64
 	// MemoryUsage 内存使用率（0-100）
@@ -85,7 +86,7 @@ type BaseLoadBalancer struct {
 
 // ConsistentHash 一致性哈希实现
 type ConsistentHash struct {
-	nodes      map[uint32]message.Address
+	nodes      map[uint32]address.Address
 	sortedKeys []uint32
 	replicas   int
 	hashLock   sync.RWMutex
@@ -111,7 +112,7 @@ func NewBaseLoadBalancer(algorithm LoadBalancingAlgorithm) *BaseLoadBalancer {
 }
 
 // Select 选择目标地址
-func (lb *BaseLoadBalancer) Select(ctx context.Context, msg message.Message, candidates []CandidateStatus) ([]message.Address, error) {
+func (lb *BaseLoadBalancer) Select(ctx context.Context, msg message.Message, candidates []CandidateStatus) ([]address.Address, error) {
 	if len(candidates) == 0 {
 		return nil, errors.New("no candidates available")
 	}
@@ -150,7 +151,7 @@ func (lb *BaseLoadBalancer) Select(ctx context.Context, msg message.Message, can
 }
 
 // UpdateMetrics 更新指标
-func (lb *BaseLoadBalancer) UpdateMetrics(address message.Address, metrics LoadMetrics) error {
+func (lb *BaseLoadBalancer) UpdateMetrics(address address.Address, metrics LoadMetrics) error {
 	if address == nil {
 		return errors.New("address cannot be nil")
 	}
@@ -177,7 +178,7 @@ func (lb *BaseLoadBalancer) UpdateMetrics(address message.Address, metrics LoadM
 }
 
 // GetMetrics 获取指标
-func (lb *BaseLoadBalancer) GetMetrics(address message.Address) (LoadMetrics, error) {
+func (lb *BaseLoadBalancer) GetMetrics(address address.Address) (LoadMetrics, error) {
 	if address == nil {
 		return LoadMetrics{}, errors.New("address cannot be nil")
 	}
@@ -196,7 +197,7 @@ func (lb *BaseLoadBalancer) GetMetrics(address message.Address) (LoadMetrics, er
 }
 
 // HealthCheck 健康检查
-func (lb *BaseLoadBalancer) HealthCheck(ctx context.Context, address message.Address) (bool, error) {
+func (lb *BaseLoadBalancer) HealthCheck(ctx context.Context, address address.Address) (bool, error) {
 	if address == nil {
 		return false, errors.New("address cannot be nil")
 	}
@@ -224,9 +225,9 @@ func (lb *BaseLoadBalancer) HealthCheck(ctx context.Context, address message.Add
 }
 
 // selectRoundRobin 轮询选择
-func (lb *BaseLoadBalancer) selectRoundRobin(candidates []CandidateStatus) []message.Address {
+func (lb *BaseLoadBalancer) selectRoundRobin(candidates []CandidateStatus) []address.Address {
 	if len(candidates) == 0 {
-		return []message.Address{}
+		return []address.Address{}
 	}
 
 	lb.rrLock.Lock()
@@ -235,20 +236,20 @@ func (lb *BaseLoadBalancer) selectRoundRobin(candidates []CandidateStatus) []mes
 	lb.rrIndex = (index + 1) % len(candidates)
 	lb.rrLock.Unlock()
 
-	return []message.Address{target}
+	return []address.Address{target}
 }
 
 // selectLeastConnections 最少连接选择
-func (lb *BaseLoadBalancer) selectLeastConnections(candidates []CandidateStatus) []message.Address {
+func (lb *BaseLoadBalancer) selectLeastConnections(candidates []CandidateStatus) []address.Address {
 	if len(candidates) == 0 {
-		return []message.Address{}
+		return []address.Address{}
 	}
 
 	lb.metricsLock.RLock()
 	defer lb.metricsLock.RUnlock()
 
 	var minConnections = int(^uint(0) >> 1) // 最大int值
-	var selected message.Address
+	var selected address.Address
 
 	for _, candidate := range candidates {
 		metrics, exists := lb.metrics[candidate.Address.String()]
@@ -264,23 +265,23 @@ func (lb *BaseLoadBalancer) selectLeastConnections(candidates []CandidateStatus)
 
 	if selected == nil {
 		// 如果没有找到指标，返回第一个候选
-		return []message.Address{candidates[0].Address}
+		return []address.Address{candidates[0].Address}
 	}
 
-	return []message.Address{selected}
+	return []address.Address{selected}
 }
 
 // selectLeastLoad 最小负载选择
-func (lb *BaseLoadBalancer) selectLeastLoad(candidates []CandidateStatus) []message.Address {
+func (lb *BaseLoadBalancer) selectLeastLoad(candidates []CandidateStatus) []address.Address {
 	if len(candidates) == 0 {
-		return []message.Address{}
+		return []address.Address{}
 	}
 
 	lb.metricsLock.RLock()
 	defer lb.metricsLock.RUnlock()
 
 	var minLoad = 101.0 // 大于最大负载
-	var selected message.Address
+	var selected address.Address
 
 	for _, candidate := range candidates {
 		metrics, exists := lb.metrics[candidate.Address.String()]
@@ -298,22 +299,22 @@ func (lb *BaseLoadBalancer) selectLeastLoad(candidates []CandidateStatus) []mess
 
 	if selected == nil {
 		// 如果没有找到指标，返回第一个候选
-		return []message.Address{candidates[0].Address}
+		return []address.Address{candidates[0].Address}
 	}
 
-	return []message.Address{selected}
+	return []address.Address{selected}
 }
 
 // selectWeightedRoundRobin 加权轮询选择
-func (lb *BaseLoadBalancer) selectWeightedRoundRobin(candidates []CandidateStatus) []message.Address {
+func (lb *BaseLoadBalancer) selectWeightedRoundRobin(candidates []CandidateStatus) []address.Address {
 	if len(candidates) == 0 {
-		return []message.Address{}
+		return []address.Address{}
 	}
 
 	// 计算总权重
 	totalWeight := 0.0
 	weights := make([]float64, len(candidates))
-	addresses := make([]message.Address, len(candidates))
+	addresses := make([]address.Address, len(candidates))
 
 	lb.metricsLock.RLock()
 	for i, candidate := range candidates {
@@ -345,25 +346,25 @@ func (lb *BaseLoadBalancer) selectWeightedRoundRobin(candidates []CandidateStatu
 	for i, weight := range weights {
 		currentWeight += (weight / totalWeight) * 100.0
 		if float64(selection) < currentWeight {
-			return []message.Address{addresses[i]}
+			return []address.Address{addresses[i]}
 		}
 	}
 
 	// 默认返回第一个
-	return []message.Address{addresses[0]}
+	return []address.Address{addresses[0]}
 }
 
 // selectWeightedLeastConnections 加权最少连接选择
-func (lb *BaseLoadBalancer) selectWeightedLeastConnections(candidates []CandidateStatus) []message.Address {
+func (lb *BaseLoadBalancer) selectWeightedLeastConnections(candidates []CandidateStatus) []address.Address {
 	if len(candidates) == 0 {
-		return []message.Address{}
+		return []address.Address{}
 	}
 
 	lb.metricsLock.RLock()
 	defer lb.metricsLock.RUnlock()
 
 	var bestScore = -1.0
-	var selected message.Address
+	var selected address.Address
 
 	for _, candidate := range candidates {
 		metrics, exists := lb.metrics[candidate.Address.String()]
@@ -386,14 +387,14 @@ func (lb *BaseLoadBalancer) selectWeightedLeastConnections(candidates []Candidat
 
 	if selected == nil {
 		// 如果没有找到指标，返回第一个候选
-		return []message.Address{candidates[0].Address}
+		return []address.Address{candidates[0].Address}
 	}
 
-	return []message.Address{selected}
+	return []address.Address{selected}
 }
 
 // selectConsistentHash 一致性哈希选择
-func (lb *BaseLoadBalancer) selectConsistentHash(msg message.Message, candidates []CandidateStatus) []message.Address {
+func (lb *BaseLoadBalancer) selectConsistentHash(msg message.Message, candidates []CandidateStatus) []address.Address {
 	if lb.consistentHash == nil {
 		// 回退到轮询
 		return lb.selectRoundRobin(candidates)
@@ -415,16 +416,16 @@ func (lb *BaseLoadBalancer) selectConsistentHash(msg message.Message, candidates
 	node := lb.consistentHash.GetNode(key)
 	if node == nil {
 		// 如果没有找到节点，返回第一个候选
-		return []message.Address{candidates[0].Address}
+		return []address.Address{candidates[0].Address}
 	}
 
-	return []message.Address{node}
+	return []address.Address{node}
 }
 
 // selectAdaptive 自适应选择
-func (lb *BaseLoadBalancer) selectAdaptive(msg message.Message, candidates []CandidateStatus) []message.Address {
+func (lb *BaseLoadBalancer) selectAdaptive(msg message.Message, candidates []CandidateStatus) []address.Address {
 	if len(candidates) == 0 {
-		return []message.Address{}
+		return []address.Address{}
 	}
 
 	lb.adaptiveLock.RLock()
@@ -438,7 +439,7 @@ func (lb *BaseLoadBalancer) selectAdaptive(msg message.Message, candidates []Can
 	// 计算总权重
 	totalWeight := 0.0
 	weights := make([]float64, len(candidates))
-	addresses := make([]message.Address, len(candidates))
+	addresses := make([]address.Address, len(candidates))
 
 	for i, candidate := range candidates {
 		addresses[i] = candidate.Address
@@ -459,12 +460,12 @@ func (lb *BaseLoadBalancer) selectAdaptive(msg message.Message, candidates []Can
 	for i, weight := range weights {
 		cumulativeWeight += weight
 		if randomValue <= cumulativeWeight {
-			return []message.Address{addresses[i]}
+			return []address.Address{addresses[i]}
 		}
 	}
 
 	// 默认返回第一个
-	return []message.Address{addresses[0]}
+	return []address.Address{addresses[0]}
 }
 
 // updateAdaptiveWeight 更新自适应权重
@@ -530,7 +531,7 @@ type ClusterNodeManager struct {
 
 // ClusterNode 集群节点
 type ClusterNode struct {
-	Address      message.Address
+	Address      address.Address
 	Region       string
 	Zone         string
 	Healthy      bool
@@ -555,7 +556,7 @@ func NewClusterNodeManager() *ClusterNodeManager {
 }
 
 // Route 集群路由
-func (cr *ClusterRouter) Route(ctx context.Context, msg message.Message, candidates []CandidateStatus) ([]message.Address, error) {
+func (cr *ClusterRouter) Route(ctx context.Context, msg message.Message, candidates []CandidateStatus) ([]address.Address, error) {
 	// 根据集群策略过滤和排序候选
 	filteredCandidates := cr.filterCandidatesByStrategy(candidates)
 
@@ -685,7 +686,7 @@ func (cnm *ClusterNodeManager) AddNode(node ClusterNode) error {
 }
 
 // RemoveNode 移除节点
-func (cnm *ClusterNodeManager) RemoveNode(address message.Address) error {
+func (cnm *ClusterNodeManager) RemoveNode(address address.Address) error {
 	if address == nil {
 		return errors.New("address cannot be nil")
 	}
@@ -746,13 +747,13 @@ func (cnm *ClusterNodeManager) GetAllNodes() []ClusterNode {
 // NewConsistentHash 创建一致性哈希
 func NewConsistentHash(replicas int) *ConsistentHash {
 	return &ConsistentHash{
-		nodes:    make(map[uint32]message.Address),
+		nodes:    make(map[uint32]address.Address),
 		replicas: replicas,
 	}
 }
 
 // AddNode 添加节点到一致性哈希
-func (ch *ConsistentHash) AddNode(node message.Address) {
+func (ch *ConsistentHash) AddNode(node address.Address) {
 	if node == nil {
 		return
 	}
@@ -772,7 +773,7 @@ func (ch *ConsistentHash) AddNode(node message.Address) {
 }
 
 // RemoveNode 从一致性哈希移除节点
-func (ch *ConsistentHash) RemoveNode(node message.Address) {
+func (ch *ConsistentHash) RemoveNode(node address.Address) {
 	if node == nil {
 		return
 	}
@@ -791,7 +792,7 @@ func (ch *ConsistentHash) RemoveNode(node message.Address) {
 }
 
 // GetNode 获取节点
-func (ch *ConsistentHash) GetNode(key string) message.Address {
+func (ch *ConsistentHash) GetNode(key string) address.Address {
 	if len(ch.nodes) == 0 {
 		return nil
 	}

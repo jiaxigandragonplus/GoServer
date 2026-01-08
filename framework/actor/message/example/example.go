@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/GooLuck/GoServer/framework/actor/address"
 	"github.com/GooLuck/GoServer/framework/actor/message"
 )
 
@@ -78,7 +79,7 @@ func exampleAddressManagement() {
 	fmt.Println("\n--- 示例2: 地址管理 ---")
 
 	// 创建本地地址
-	localAddr, err := message.NewLocalAddress("actor", "/user/john")
+	localAddr, err := address.NewLocalAddress("actor", "/user/john")
 	if err != nil {
 		log.Printf("创建本地地址失败: %v", err)
 	} else {
@@ -88,11 +89,11 @@ func exampleAddressManagement() {
 	}
 
 	// 使用Must函数创建本地地址（如果失败会panic）
-	localAddr2 := message.MustNewLocalAddress("actor", "/user/john2")
+	localAddr2 := address.MustNewLocalAddress("actor", "/user/john2")
 	fmt.Printf("Must本地地址: %s\n", localAddr2.String())
 
 	// 创建远程地址
-	remoteAddr, err := message.NewRemoteAddress("actor", "192.168.1.100", "8080", "/user/jane")
+	remoteAddr, err := address.NewRemoteAddress("actor", "192.168.1.100", "8080", "/user/jane")
 	if err != nil {
 		log.Printf("创建远程地址失败: %v", err)
 	} else {
@@ -102,13 +103,13 @@ func exampleAddressManagement() {
 	}
 
 	// 测试不支持的协议
-	_, err = message.NewLocalAddress("unsupported", "/user/test")
+	_, err = address.NewLocalAddress("unsupported", "/user/test")
 	if err != nil {
 		fmt.Printf("不支持的协议错误（预期）: %v\n", err)
 	}
 
 	// 解析地址
-	parsedAddr, err := message.ParseAddress("actor://192.168.1.100:8080/user/jane")
+	parsedAddr, err := address.ParseAddress("actor://192.168.1.100:8080/user/jane")
 	if err != nil {
 		log.Printf("解析地址失败: %v", err)
 	} else {
@@ -128,15 +129,15 @@ func exampleMessageRouting() {
 	router := message.GetDefaultRouter()
 
 	// 创建目标地址
-	target1 := message.MustNewLocalAddress("actor", "/user/alice")
-	target2 := message.MustNewLocalAddress("actor", "/user/bob")
-	target3 := message.MustNewLocalAddress("actor", "/user/charlie")
+	target1 := address.MustNewLocalAddress("actor", "/user/alice")
+	target2 := address.MustNewLocalAddress("actor", "/user/bob")
+	target3 := address.MustNewLocalAddress("actor", "/user/charlie")
 
 	// 添加路由规则
 	rule := message.RouteRule{
 		ID:       "user-messages",
 		Pattern:  "user.*",
-		Targets:  []message.Address{target1, target2, target3},
+		Targets:  []address.Address{target1, target2, target3},
 		Strategy: message.StrategyRoundRobin,
 		Priority: 1,
 	}
@@ -190,8 +191,8 @@ func exampleMessageSerialization() {
 	})
 
 	// 设置地址
-	sender := message.MustNewLocalAddress("actor", "/sender")
-	receiver := message.MustNewLocalAddress("actor", "/receiver")
+	sender := address.MustNewLocalAddress("actor", "/sender")
+	receiver := address.MustNewLocalAddress("actor", "/receiver")
 	msg.SetSender(sender)
 	msg.SetReceiver(receiver)
 

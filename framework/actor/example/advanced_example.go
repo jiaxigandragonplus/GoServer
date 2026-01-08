@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/GooLuck/GoServer/framework/actor"
+	"github.com/GooLuck/GoServer/framework/actor/address"
 	"github.com/GooLuck/GoServer/framework/actor/message"
 	"github.com/GooLuck/GoServer/framework/actor/monitor"
 )
@@ -17,7 +18,7 @@ type WorkerActor struct {
 }
 
 // NewWorkerActor 创建新的工作actor
-func NewWorkerActor(address message.Address) (*WorkerActor, error) {
+func NewWorkerActor(address address.Address) (*WorkerActor, error) {
 	baseActor, err := actor.NewBaseActor(address, nil)
 	if err != nil {
 		return nil, err
@@ -97,7 +98,7 @@ type SupervisorActor struct {
 }
 
 // NewSupervisorActor 创建新的监督者actor
-func NewSupervisorActor(address message.Address) (*SupervisorActor, error) {
+func NewSupervisorActor(address address.Address) (*SupervisorActor, error) {
 	baseActor, err := actor.NewBaseActor(address, nil)
 	if err != nil {
 		return nil, err
@@ -115,7 +116,7 @@ func (a *SupervisorActor) HandleMessage(ctx context.Context, envelope *message.E
 	switch msg.Type() {
 	case "supervisor.create_worker":
 		// 创建子worker
-		workerAddr, _ := message.NewLocalAddress("local", "/worker/"+fmt.Sprintf("%d", time.Now().UnixNano()))
+		workerAddr, _ := address.NewLocalAddress("local", "/worker/"+fmt.Sprintf("%d", time.Now().UnixNano()))
 
 		// 使用上下文创建子actor
 		worker, err := NewWorkerActor(workerAddr)
@@ -183,7 +184,7 @@ func exampleLifecycleHooks(ctx context.Context) {
 	fmt.Println("\n--- 示例1: 生命周期钩子 ---")
 
 	// 创建工作actor
-	workerAddr, _ := message.NewLocalAddress("local", "/advanced/worker")
+	workerAddr, _ := address.NewLocalAddress("local", "/advanced/worker")
 	worker, err := NewWorkerActor(workerAddr)
 	if err != nil {
 		fmt.Printf("创建工作actor失败: %v\n", err)
@@ -198,7 +199,7 @@ func exampleLifecycleHooks(ctx context.Context) {
 	}
 
 	// 发送工作消息
-	clientAddr, _ := message.NewLocalAddress("local", "/advanced/client")
+	clientAddr, _ := address.NewLocalAddress("local", "/advanced/client")
 	workMsg := message.NewBaseMessage("work.do", map[string]any{
 		"task": "test_task",
 	})
@@ -236,7 +237,7 @@ func exampleActorContext(ctx context.Context) {
 	fmt.Println("\n--- 示例2: Actor上下文和子actor管理 ---")
 
 	// 创建监督者actor
-	supervisorAddr, _ := message.NewLocalAddress("local", "/advanced/supervisor")
+	supervisorAddr, _ := address.NewLocalAddress("local", "/advanced/supervisor")
 	supervisor, err := NewSupervisorActor(supervisorAddr)
 	if err != nil {
 		fmt.Printf("创建监督者actor失败: %v\n", err)
@@ -250,7 +251,7 @@ func exampleActorContext(ctx context.Context) {
 	}
 
 	// 创建子worker
-	clientAddr, _ := message.NewLocalAddress("local", "/advanced/client2")
+	clientAddr, _ := address.NewLocalAddress("local", "/advanced/client2")
 	createMsg := message.NewBaseMessage("supervisor.create_worker", nil)
 	createMsg.SetSender(clientAddr)
 	createMsg.SetReceiver(supervisorAddr)
@@ -291,7 +292,7 @@ func exampleFactoryRegistry(ctx context.Context) {
 	registry := actor.GetDefaultActorRegistry()
 
 	// 注册worker actor工厂
-	workerFactory := actor.NewBaseActorFactory("worker", func(address message.Address, parent actor.Actor) (actor.Actor, error) {
+	workerFactory := actor.NewBaseActorFactory("worker", func(address address.Address, parent actor.Actor) (actor.Actor, error) {
 		return NewWorkerActor(address)
 	})
 
@@ -302,7 +303,7 @@ func exampleFactoryRegistry(ctx context.Context) {
 	}
 
 	// 使用工厂创建actor
-	workerAddr, _ := message.NewLocalAddress("local", "/factory/worker1")
+	workerAddr, _ := address.NewLocalAddress("local", "/factory/worker1")
 	worker, err := registry.Create("worker", workerAddr)
 	if err != nil {
 		fmt.Printf("使用工厂创建actor失败: %v\n", err)
@@ -324,7 +325,7 @@ func exampleFactoryRegistry(ctx context.Context) {
 
 	// 使用构建器创建actor
 	fmt.Println("\n使用ActorBuilder创建actor...")
-	workerAddr2, _ := message.NewLocalAddress("local", "/builder/worker1")
+	workerAddr2, _ := address.NewLocalAddress("local", "/builder/worker1")
 	builder := actor.NewActorBuilder("worker").
 		WithAddress(workerAddr2).
 		WithSupervisionStrategy(actor.SupervisionStrategyRestart)
@@ -356,7 +357,7 @@ func exampleMonitoring(ctx context.Context) {
 	// 创建并启动多个actor
 	actorList := make([]actor.Actor, 3)
 	for i := 0; i < 3; i++ {
-		addr, _ := message.NewLocalAddress("local", fmt.Sprintf("/monitor/actor%d", i))
+		addr, _ := address.NewLocalAddress("local", fmt.Sprintf("/monitor/actor%d", i))
 		worker, err := NewWorkerActor(addr)
 		if err != nil {
 			fmt.Printf("创建监控actor %d失败: %v\n", i, err)
@@ -412,7 +413,7 @@ func exampleErrorRecovery(ctx context.Context) {
 	fmt.Println("\n--- 示例5: 错误处理和恢复 ---")
 
 	// 创建测试actor
-	addr, _ := message.NewLocalAddress("local", "/recovery/test")
+	addr, _ := address.NewLocalAddress("local", "/recovery/test")
 	actor, err := NewWorkerActor(addr)
 	if err != nil {
 		fmt.Printf("创建恢复测试actor失败: %v\n", err)
@@ -426,7 +427,7 @@ func exampleErrorRecovery(ctx context.Context) {
 	}
 
 	// 发送正常消息
-	clientAddr, _ := message.NewLocalAddress("local", "/recovery/client")
+	clientAddr, _ := address.NewLocalAddress("local", "/recovery/client")
 	normalMsg := message.NewBaseMessage("work.do", map[string]any{
 		"task": "normal_work",
 	})

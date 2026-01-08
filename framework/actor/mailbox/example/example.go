@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/GooLuck/GoServer/framework/actor/address"
 	"github.com/GooLuck/GoServer/framework/actor/mailbox"
 	"github.com/GooLuck/GoServer/framework/actor/message"
 )
@@ -55,7 +56,7 @@ func exampleBasicMailbox() {
 		"ip":       "192.168.1.100",
 	})
 
-	addr, _ := message.NewLocalAddress("local", "/user/service")
+	addr, _ := address.NewLocalAddress("local", "/user/service")
 	msg.SetSender(addr)
 	msg.SetReceiver(addr)
 
@@ -112,7 +113,7 @@ func exampleMailboxManager() {
 	addresses := []string{"/user/alice", "/user/bob", "/user/charlie"}
 
 	for _, path := range addresses {
-		addr, err := message.NewLocalAddress("local", path)
+		addr, err := address.NewLocalAddress("local", path)
 		if err != nil {
 			fmt.Printf("创建地址失败 %s: %v\n", path, err)
 			continue
@@ -142,7 +143,7 @@ func exampleMailboxManager() {
 	fmt.Printf("共有 %d 个邮箱\n", len(mailboxes))
 
 	// 测试获取邮箱
-	aliceAddr, _ := message.NewLocalAddress("local", "/user/alice")
+	aliceAddr, _ := address.NewLocalAddress("local", "/user/alice")
 	mailbox, err := manager.GetMailbox(aliceAddr)
 	if err != nil {
 		fmt.Printf("获取邮箱失败: %v\n", err)
@@ -178,7 +179,7 @@ func exampleDeliveryService() {
 	service := mailbox.NewDeliveryService(manager, router)
 
 	// 创建actor地址
-	receiverAddr, _ := message.NewLocalAddress("actor", "/email/service")
+	receiverAddr, _ := address.NewLocalAddress("actor", "/email/service")
 
 	// 创建消息
 	ctx := context.Background()
@@ -188,7 +189,7 @@ func exampleDeliveryService() {
 		"body":    "欢迎使用我们的服务！",
 	})
 
-	senderAddr, _ := message.NewLocalAddress("local", "/api/gateway")
+	senderAddr, _ := address.NewLocalAddress("local", "/api/gateway")
 	msg.SetSender(senderAddr)
 	msg.SetReceiver(receiverAddr)
 
@@ -247,7 +248,7 @@ func exampleDeadLetterQueue() {
 	msg := message.NewBaseMessage("expired.message", "此消息已过期")
 	msg.SetTTL(1 * time.Millisecond) // 设置很短的TTL
 
-	addr, _ := message.NewLocalAddress("local", "/test")
+	addr, _ := address.NewLocalAddress("local", "/test")
 	msg.SetSender(addr)
 	msg.SetReceiver(addr)
 

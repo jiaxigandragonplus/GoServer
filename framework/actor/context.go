@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/GooLuck/GoServer/framework/actor/address"
 	"github.com/GooLuck/GoServer/framework/actor/mailbox"
 	"github.com/GooLuck/GoServer/framework/actor/message"
 )
@@ -69,7 +70,7 @@ func (c *ActorContext) Parent() Actor {
 }
 
 // Address 返回actor地址
-func (c *ActorContext) Address() message.Address {
+func (c *ActorContext) Address() address.Address {
 	return c.actor.Address()
 }
 
@@ -125,7 +126,7 @@ func (c *ActorContext) AddChild(child Actor) error {
 }
 
 // RemoveChild 移除子actor
-func (c *ActorContext) RemoveChild(address message.Address) error {
+func (c *ActorContext) RemoveChild(address address.Address) error {
 	if address == nil {
 		return ErrInvalidAddress
 	}
@@ -144,7 +145,7 @@ func (c *ActorContext) RemoveChild(address message.Address) error {
 }
 
 // GetChild 获取子actor
-func (c *ActorContext) GetChild(address message.Address) (Actor, error) {
+func (c *ActorContext) GetChild(address address.Address) (Actor, error) {
 	if address == nil {
 		return nil, ErrInvalidAddress
 	}
@@ -231,9 +232,9 @@ func (c *ActorContext) DeleteData(key string) {
 }
 
 // Send 发送消息到另一个actor
-func (c *ActorContext) Send(ctx context.Context, receiver message.Address, msg message.Message) error {
+func (c *ActorContext) Send(ctx context.Context, receiver address.Address, msg message.Message) error {
 	return c.actor.(interface {
-		Send(ctx context.Context, receiver message.Address, msg message.Message) error
+		Send(ctx context.Context, receiver address.Address, msg message.Message) error
 	}).Send(ctx, receiver, msg)
 }
 
@@ -254,7 +255,7 @@ func (c *ActorContext) StartChild(ctx context.Context, child Actor) error {
 }
 
 // StopChild 停止子actor
-func (c *ActorContext) StopChild(address message.Address) error {
+func (c *ActorContext) StopChild(address address.Address) error {
 	child, err := c.GetChild(address)
 	if err != nil {
 		return err

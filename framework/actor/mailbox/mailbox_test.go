@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GooLuck/GoServer/framework/actor/address"
 	"github.com/GooLuck/GoServer/framework/actor/message"
 )
 
@@ -42,7 +43,7 @@ func TestBoundedMailboxPushPop(t *testing.T) {
 
 	// 创建测试消息
 	msg := message.NewBaseMessage("test.type", "test data")
-	addr, _ := message.NewLocalAddress("local", "/test")
+	addr, _ := address.NewLocalAddress("local", "/test")
 	msg.SetSender(addr)
 	msg.SetReceiver(addr)
 	envelope := message.NewEnvelope(msg)
@@ -96,7 +97,7 @@ func TestBoundedMailboxFull(t *testing.T) {
 
 	// 创建测试消息
 	msg1 := message.NewBaseMessage("type1", "data1")
-	addr, _ := message.NewLocalAddress("local", "/test")
+	addr, _ := address.NewLocalAddress("local", "/test")
 	msg1.SetSender(addr)
 	msg1.SetReceiver(addr)
 	envelope1 := message.NewEnvelope(msg1)
@@ -145,7 +146,7 @@ func TestBoundedMailboxDropOldest(t *testing.T) {
 
 	// 创建测试消息
 	msg1 := message.NewBaseMessage("type1", "data1")
-	addr, _ := message.NewLocalAddress("local", "/test")
+	addr, _ := address.NewLocalAddress("local", "/test")
 	msg1.SetSender(addr)
 	msg1.SetReceiver(addr)
 	envelope1 := message.NewEnvelope(msg1)
@@ -197,7 +198,7 @@ func TestBoundedMailboxTTL(t *testing.T) {
 
 	// 创建过期消息
 	msg := message.NewBaseMessage("expired.type", "expired data")
-	addr, _ := message.NewLocalAddress("local", "/test")
+	addr, _ := address.NewLocalAddress("local", "/test")
 	msg.SetSender(addr)
 	msg.SetReceiver(addr)
 	msg.SetTTL(1 * time.Millisecond) // 非常短的TTL
@@ -228,7 +229,7 @@ func TestUnboundedMailbox(t *testing.T) {
 	// 推送多个消息
 	for i := 0; i < 100; i++ {
 		msg := message.NewBaseMessage("test.type", i)
-		addr, _ := message.NewLocalAddress("local", "/test")
+		addr, _ := address.NewLocalAddress("local", "/test")
 		msg.SetSender(addr)
 		msg.SetReceiver(addr)
 		envelope := message.NewEnvelope(msg)
@@ -254,7 +255,7 @@ func TestMailboxClose(t *testing.T) {
 
 	// 推送一个消息
 	msg := message.NewBaseMessage("test.type", "test data")
-	addr, _ := message.NewLocalAddress("local", "/test")
+	addr, _ := address.NewLocalAddress("local", "/test")
 	msg.SetSender(addr)
 	msg.SetReceiver(addr)
 	envelope := message.NewEnvelope(msg)
@@ -299,7 +300,7 @@ func TestTryPop(t *testing.T) {
 	// 推送消息
 	ctx := context.Background()
 	msg := message.NewBaseMessage("test.type", "test data")
-	addr, _ := message.NewLocalAddress("local", "/test")
+	addr, _ := address.NewLocalAddress("local", "/test")
 	msg.SetSender(addr)
 	msg.SetReceiver(addr)
 	envelope := message.NewEnvelope(msg)
@@ -340,7 +341,7 @@ func TestMailboxStats(t *testing.T) {
 	// 推送3个消息
 	for i := 0; i < 3; i++ {
 		msg := message.NewBaseMessage("test.type", i)
-		addr, _ := message.NewLocalAddress("local", "/test")
+		addr, _ := address.NewLocalAddress("local", "/test")
 		msg.SetSender(addr)
 		msg.SetReceiver(addr)
 		envelope := message.NewEnvelope(msg)
@@ -387,7 +388,7 @@ func TestMailboxClear(t *testing.T) {
 	// 推送几个消息
 	for i := 0; i < 5; i++ {
 		msg := message.NewBaseMessage("test.type", i)
-		addr, _ := message.NewLocalAddress("local", "/test")
+		addr, _ := address.NewLocalAddress("local", "/test")
 		msg.SetSender(addr)
 		msg.SetReceiver(addr)
 		envelope := message.NewEnvelope(msg)

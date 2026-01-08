@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/GooLuck/GoServer/framework/actor"
-	"github.com/GooLuck/GoServer/framework/actor/message"
+	"github.com/GooLuck/GoServer/framework/actor/address"
 )
 
 // ManagementAPI 管理API服务
@@ -461,14 +461,14 @@ func (api *ManagementAPI) handleGetActor(w http.ResponseWriter, r *http.Request)
 
 // handleRestartActor 处理重启actor
 func (api *ManagementAPI) handleRestartActor(w http.ResponseWriter, r *http.Request) {
-	address := r.PathValue("address")
-	if address == "" {
+	addr := r.PathValue("address")
+	if addr == "" {
 		api.writeError(w, http.StatusBadRequest, "Address is required")
 		return
 	}
 
 	// 解析地址
-	addr, err := message.ParseAddress(address)
+	addrObj, err := address.ParseAddress(addr)
 	if err != nil {
 		api.writeError(w, http.StatusBadRequest, fmt.Sprintf("Invalid address: %v", err))
 		return
@@ -476,7 +476,7 @@ func (api *ManagementAPI) handleRestartActor(w http.ResponseWriter, r *http.Requ
 
 	// 获取actor管理器
 	actorMgr := actor.GetDefaultActorManager()
-	actor, err := actorMgr.Get(addr)
+	actor, err := actorMgr.Get(addrObj)
 	if err != nil {
 		api.writeError(w, http.StatusNotFound, "Actor not found")
 		return
@@ -498,24 +498,24 @@ func (api *ManagementAPI) handleRestartActor(w http.ResponseWriter, r *http.Requ
 	}
 
 	// 记录重启
-	api.metricsCollector.RecordActorRestart(address)
+	api.metricsCollector.RecordActorRestart(addr)
 
 	api.writeResponse(w, http.StatusOK, map[string]string{
 		"message": "Actor restarted successfully",
-		"address": address,
+		"address": addr,
 	})
 }
 
 // handleStopActor 处理停止actor
 func (api *ManagementAPI) handleStopActor(w http.ResponseWriter, r *http.Request) {
-	address := r.PathValue("address")
-	if address == "" {
+	addr := r.PathValue("address")
+	if addr == "" {
 		api.writeError(w, http.StatusBadRequest, "Address is required")
 		return
 	}
 
 	// 解析地址
-	addr, err := message.ParseAddress(address)
+	addrObj, err := address.ParseAddress(addr)
 	if err != nil {
 		api.writeError(w, http.StatusBadRequest, fmt.Sprintf("Invalid address: %v", err))
 		return
@@ -523,7 +523,7 @@ func (api *ManagementAPI) handleStopActor(w http.ResponseWriter, r *http.Request
 
 	// 获取actor管理器
 	actorMgr := actor.GetDefaultActorManager()
-	actor, err := actorMgr.Get(addr)
+	actor, err := actorMgr.Get(addrObj)
 	if err != nil {
 		api.writeError(w, http.StatusNotFound, "Actor not found")
 		return
@@ -537,20 +537,20 @@ func (api *ManagementAPI) handleStopActor(w http.ResponseWriter, r *http.Request
 
 	api.writeResponse(w, http.StatusOK, map[string]string{
 		"message": "Actor stopped successfully",
-		"address": address,
+		"address": addr,
 	})
 }
 
 // handleStartActor 处理启动actor
 func (api *ManagementAPI) handleStartActor(w http.ResponseWriter, r *http.Request) {
-	address := r.PathValue("address")
-	if address == "" {
+	addr := r.PathValue("address")
+	if addr == "" {
 		api.writeError(w, http.StatusBadRequest, "Address is required")
 		return
 	}
 
 	// 解析地址
-	addr, err := message.ParseAddress(address)
+	addrObj, err := address.ParseAddress(addr)
 	if err != nil {
 		api.writeError(w, http.StatusBadRequest, fmt.Sprintf("Invalid address: %v", err))
 		return
@@ -558,7 +558,7 @@ func (api *ManagementAPI) handleStartActor(w http.ResponseWriter, r *http.Reques
 
 	// 获取actor管理器
 	actorMgr := actor.GetDefaultActorManager()
-	actor, err := actorMgr.Get(addr)
+	actor, err := actorMgr.Get(addrObj)
 	if err != nil {
 		api.writeError(w, http.StatusNotFound, "Actor not found")
 		return
@@ -575,7 +575,7 @@ func (api *ManagementAPI) handleStartActor(w http.ResponseWriter, r *http.Reques
 
 	api.writeResponse(w, http.StatusOK, map[string]string{
 		"message": "Actor started successfully",
-		"address": address,
+		"address": addr,
 	})
 }
 
@@ -663,7 +663,7 @@ func (api *ManagementAPI) handleCheckAll(w http.ResponseWriter, r *http.Request)
 
 	for _, metrics := range actorMetrics {
 		// 解析地址
-		addr, err := message.ParseAddress(metrics.ActorAddress)
+		addr, err := address.ParseAddress(metrics.ActorAddress)
 		if err != nil {
 			continue
 		}

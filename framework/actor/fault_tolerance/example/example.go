@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/GooLuck/GoServer/framework/actor"
+	"github.com/GooLuck/GoServer/framework/actor/address"
 	"github.com/GooLuck/GoServer/framework/actor/fault_tolerance"
 	"github.com/GooLuck/GoServer/framework/actor/mailbox"
 	"github.com/GooLuck/GoServer/framework/actor/message"
@@ -20,7 +21,7 @@ type ExampleActor struct {
 
 // NewExampleActor 创建新的示例actor
 func NewExampleActor(name string) (*ExampleActor, error) {
-	addr, err := message.NewLocalAddress("local", "/example/"+name)
+	addr, err := address.NewLocalAddress("local", "/example/"+name)
 	if err != nil {
 		return nil, err
 	}

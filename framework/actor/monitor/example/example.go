@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/GooLuck/GoServer/framework/actor"
+	"github.com/GooLuck/GoServer/framework/actor/address"
 	"github.com/GooLuck/GoServer/framework/actor/mailbox"
 	"github.com/GooLuck/GoServer/framework/actor/message"
 	"github.com/GooLuck/GoServer/framework/actor/monitor"
@@ -20,7 +21,7 @@ type ExampleActor struct {
 
 // NewExampleActor 创建新的示例actor
 func NewExampleActor(name string) (*ExampleActor, error) {
-	addr, err := message.NewLocalActorAddress(fmt.Sprintf("/example/%s", name))
+	addr, err := address.NewLocalActorAddress(fmt.Sprintf("/example/%s", name))
 	if err != nil {
 		return nil, err
 	}

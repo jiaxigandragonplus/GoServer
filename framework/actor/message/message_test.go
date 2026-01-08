@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"github.com/GooLuck/GoServer/framework/actor/address"
 )
 
 func TestBaseMessage(t *testing.T) {
@@ -56,7 +58,7 @@ func TestBaseMessage(t *testing.T) {
 
 func TestAddress(t *testing.T) {
 	// 测试本地地址
-	localAddr, err := NewLocalAddress("actor", "/test/path")
+	localAddr, err := address.NewLocalAddress("actor", "/test/path")
 	if err != nil {
 		t.Fatalf("创建本地地址失败: %v", err)
 	}
@@ -74,7 +76,7 @@ func TestAddress(t *testing.T) {
 	}
 
 	// 测试远程地址
-	remoteAddr, err := NewRemoteAddress("actor", "example.com", "8080", "/remote/path")
+	remoteAddr, err := address.NewRemoteAddress("actor", "example.com", "8080", "/remote/path")
 	if err != nil {
 		t.Fatalf("创建远程地址失败: %v", err)
 	}
@@ -92,31 +94,31 @@ func TestAddress(t *testing.T) {
 	}
 
 	// 测试地址相等性
-	addr1 := MustNewLocalAddress("actor", "/same/path")
-	addr2 := MustNewLocalAddress("actor", "/same/path")
+	addr1 := address.MustNewLocalAddress("actor", "/same/path")
+	addr2 := address.MustNewLocalAddress("actor", "/same/path")
 	if !addr1.Equal(addr2) {
 		t.Error("相同路径的地址应相等")
 	}
 
-	addr3 := MustNewLocalAddress("actor", "/different/path")
+	addr3 := address.MustNewLocalAddress("actor", "/different/path")
 	if addr1.Equal(addr3) {
 		t.Error("不同路径的地址不应相等")
 	}
 
 	// 测试不支持的协议
-	_, err = NewLocalAddress("unsupported", "/test")
+	_, err = address.NewLocalAddress("unsupported", "/test")
 	if err == nil {
 		t.Error("不支持的协议应返回错误")
 	}
 
 	// 测试协议验证
-	if !IsProtocolSupported("actor") {
+	if !address.IsProtocolSupported("actor") {
 		t.Error("'actor' 协议应受支持")
 	}
-	if !IsProtocolSupported("tcp") {
+	if !address.IsProtocolSupported("tcp") {
 		t.Error("'tcp' 协议应受支持")
 	}
-	if IsProtocolSupported("unknown") {
+	if address.IsProtocolSupported("unknown") {
 		t.Error("'unknown' 协议不应受支持")
 	}
 }
@@ -161,14 +163,14 @@ func TestRouter(t *testing.T) {
 	router := NewBaseRouter()
 
 	// 创建目标地址
-	target1 := MustNewLocalAddress("actor", "/target1")
-	target2 := MustNewLocalAddress("actor", "/target2")
+	target1 := address.MustNewLocalAddress("actor", "/target1")
+	target2 := address.MustNewLocalAddress("actor", "/target2")
 
 	// 添加路由规则
 	rule := RouteRule{
 		ID:       "test-rule",
 		Pattern:  "test.*",
-		Targets:  []Address{target1, target2},
+		Targets:  []address.Address{target1, target2},
 		Strategy: StrategyBroadcast,
 		Priority: 1,
 	}
@@ -215,8 +217,8 @@ func TestSerialization(t *testing.T) {
 	})
 
 	// 设置地址
-	sender := MustNewLocalAddress("actor", "/sender")
-	receiver := MustNewLocalAddress("actor", "/receiver")
+	sender := address.MustNewLocalAddress("actor", "/sender")
+	receiver := address.MustNewLocalAddress("actor", "/receiver")
 	msg.SetSender(sender)
 	msg.SetReceiver(receiver)
 
@@ -271,10 +273,10 @@ func TestSerialization(t *testing.T) {
 
 func TestRouterStrategies(t *testing.T) {
 	// 创建目标地址
-	targets := []Address{
-		MustNewLocalAddress("actor", "/target1"),
-		MustNewLocalAddress("actor", "/target2"),
-		MustNewLocalAddress("actor", "/target3"),
+	targets := []address.Address{
+		address.MustNewLocalAddress("actor", "/target1"),
+		address.MustNewLocalAddress("actor", "/target2"),
+		address.MustNewLocalAddress("actor", "/target3"),
 	}
 
 	// 测试广播策略
@@ -330,16 +332,16 @@ func TestRouterStrategies(t *testing.T) {
 
 func TestAddressPool(t *testing.T) {
 	// 清空地址池
-	ClearAddressPool()
+	address.ClearAddressPool()
 
 	// 获取或创建地址
-	addr1, err := GetOrCreateAddress("actor://localhost/user/alice")
+	addr1, err := address.GetOrCreateAddress("actor://localhost/user/alice")
 	if err != nil {
 		t.Fatalf("创建地址失败: %v", err)
 	}
 
 	// 再次获取相同地址应返回同一个实例
-	addr2, err := GetOrCreateAddress("actor://localhost/user/alice")
+	addr2, err := address.GetOrCreateAddress("actor://localhost/user/alice")
 	if err != nil {
 		t.Fatalf("获取地址失败: %v", err)
 	}
@@ -349,10 +351,10 @@ func TestAddressPool(t *testing.T) {
 	}
 
 	// 移除地址
-	RemoveAddress("actor://localhost/user/alice")
+	address.RemoveAddress("actor://localhost/user/alice")
 
 	// 再次获取应创建新实例
-	addr3, err := GetOrCreateAddress("actor://localhost/user/alice")
+	addr3, err := address.GetOrCreateAddress("actor://localhost/user/alice")
 	if err != nil {
 		t.Fatalf("重新创建地址失败: %v", err)
 	}

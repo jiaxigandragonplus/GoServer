@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/GooLuck/GoServer/framework/actor"
-	"github.com/GooLuck/GoServer/framework/actor/message"
+	"github.com/GooLuck/GoServer/framework/actor/address"
 	"github.com/GooLuck/GoServer/framework/logger"
 )
 
@@ -127,7 +127,7 @@ func TestClusterActorRegistration(t *testing.T) {
 	defer clusterMgr.Stop()
 
 	// 创建actor
-	addr, err := message.NewLocalActorAddress("/test/actor1")
+	addr, err := address.NewLocalActorAddress("/test/actor1")
 	if err != nil {
 		t.Fatalf("Failed to create address: %v", err)
 	}

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/GooLuck/GoServer/framework/actor"
+	"github.com/GooLuck/GoServer/framework/actor/address"
 	"github.com/GooLuck/GoServer/framework/actor/message"
 )
 
@@ -16,7 +17,7 @@ type EchoActor struct {
 }
 
 // NewEchoActor 创建新的回显actor
-func NewEchoActor(address message.Address) (*EchoActor, error) {
+func NewEchoActor(address address.Address) (*EchoActor, error) {
 	baseActor, err := actor.NewBaseActor(address, nil)
 	if err != nil {
 		return nil, err
@@ -53,7 +54,7 @@ type CounterActor struct {
 }
 
 // NewCounterActor 创建新的计数器actor
-func NewCounterActor(address message.Address) (*CounterActor, error) {
+func NewCounterActor(address address.Address) (*CounterActor, error) {
 	baseActor, err := actor.NewBaseActor(address, nil)
 	if err != nil {
 		return nil, err
@@ -150,7 +151,7 @@ func exampleBasicActor(ctx context.Context) {
 	fmt.Println("\n--- 示例1: 基础actor使用 ---")
 
 	// 创建回显actor地址
-	echoAddr, err := message.NewLocalAddress("local", "/echo/service")
+	echoAddr, err := address.NewLocalAddress("local", "/echo/service")
 	if err != nil {
 		fmt.Printf("创建地址失败: %v\n", err)
 		return
@@ -180,7 +181,7 @@ func exampleBasicActor(ctx context.Context) {
 	})
 
 	// 设置发送者
-	senderAddr, _ := message.NewLocalAddress("local", "/test/client")
+	senderAddr, _ := address.NewLocalAddress("local", "/test/client")
 	testMsg.SetSender(senderAddr)
 	testMsg.SetReceiver(echoAddr)
 
@@ -215,7 +216,7 @@ func exampleActorManager(ctx context.Context) {
 	actors := make([]*CounterActor, len(actorNames))
 
 	for i, name := range actorNames {
-		addr, err := message.NewLocalAddress("local", "/counter/"+name)
+		addr, err := address.NewLocalAddress("local", "/counter/"+name)
 		if err != nil {
 			fmt.Printf("创建地址失败 %s: %v\n", name, err)
 			continue
@@ -247,14 +248,14 @@ func exampleActorManager(ctx context.Context) {
 	}
 
 	// 发送消息到bob的actor
-	bobAddr, _ := message.NewLocalAddress("local", "/counter/bob")
+	bobAddr, _ := address.NewLocalAddress("local", "/counter/bob")
 	bobActor, err := manager.Get(bobAddr)
 	if err != nil {
 		fmt.Printf("获取bob actor失败: %v\n", err)
 	} else {
 		// 创建增量消息
 		incMsg := message.NewBaseMessage("counter.increment", nil)
-		senderAddr, _ := message.NewLocalAddress("actor", "/test/client")
+		senderAddr, _ := address.NewLocalAddress("actor", "/test/client")
 		incMsg.SetSender(senderAddr)
 		incMsg.SetReceiver(bobAddr)
 
@@ -283,14 +284,14 @@ func exampleActorCommunication(ctx context.Context) {
 	fmt.Println("\n--- 示例3: actor间通信 ---")
 
 	// 创建两个actor
-	echoAddr, _ := message.NewLocalAddress("local", "/service/echo")
+	echoAddr, _ := address.NewLocalAddress("local", "/service/echo")
 	echoActor, err := NewEchoActor(echoAddr)
 	if err != nil {
 		fmt.Printf("创建回显actor失败: %v\n", err)
 		return
 	}
 
-	counterAddr, _ := message.NewLocalAddress("local", "/service/counter")
+	counterAddr, _ := address.NewLocalAddress("local", "/service/counter")
 	counterActor, err := NewCounterActor(counterAddr)
 	if err != nil {
 		fmt.Printf("创建计数器actor失败: %v\n", err)
@@ -304,7 +305,7 @@ func exampleActorCommunication(ctx context.Context) {
 	fmt.Println("两个actor已启动，准备进行通信测试")
 
 	// 测试1: 客户端发送消息到回显actor
-	clientAddr, _ := message.NewLocalAddress("local", "/client/main")
+	clientAddr, _ := address.NewLocalAddress("local", "/client/main")
 
 	// 创建消息
 	msgToEcho := message.NewBaseMessage("test.communication", map[string]any{

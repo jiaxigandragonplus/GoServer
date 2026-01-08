@@ -9,29 +9,30 @@ import (
 	"sync"
 	"time"
 
+	"github.com/GooLuck/GoServer/framework/actor/address"
 	"github.com/GooLuck/GoServer/framework/actor/message"
 )
 
 // ActorRouter actor路由器接口
 type ActorRouter interface {
 	// Route 路由消息到目标actor地址
-	Route(ctx context.Context, msg message.Message, candidates []message.Address) ([]message.Address, error)
+	Route(ctx context.Context, msg message.Message, candidates []address.Address) ([]address.Address, error)
 	// AddCandidate 添加候选actor地址
-	AddCandidate(address message.Address) error
+	AddCandidate(address address.Address) error
 	// RemoveCandidate 移除候选actor地址
-	RemoveCandidate(address message.Address) error
+	RemoveCandidate(address address.Address) error
 	// GetCandidates 获取所有候选actor地址
-	GetCandidates() []message.Address
+	GetCandidates() []address.Address
 	// UpdateCandidateStatus 更新候选actor状态
-	UpdateCandidateStatus(address message.Address, status CandidateStatus) error
+	UpdateCandidateStatus(address address.Address, status CandidateStatus) error
 	// GetCandidateStatus 获取候选actor状态
-	GetCandidateStatus(address message.Address) (CandidateStatus, error)
+	GetCandidateStatus(address address.Address) (CandidateStatus, error)
 }
 
 // CandidateStatus 候选actor状态
 type CandidateStatus struct {
 	// Address actor地址
-	Address message.Address
+	Address address.Address
 	// Healthy 是否健康
 	Healthy bool
 	// Load 当前负载（0-100）
@@ -99,7 +100,7 @@ type BaseActorRouter struct {
 	// rrLock 保护rrIndex的互斥锁，确保轮询索引的原子性更新
 	rrLock sync.Mutex
 	// stickySessions 粘性会话映射，key为发送者标识，value为绑定的actor地址
-	stickySessions map[string]message.Address
+	stickySessions map[string]address.Address
 	// stickyLock 保护stickySessions映射的读写锁，确保并发安全
 	stickyLock sync.RWMutex
 	// customRouter 自定义路由器接口，当使用StrategyCustom策略时使用
@@ -108,7 +109,7 @@ type BaseActorRouter struct {
 
 // CustomRouter 自定义路由器接口
 type CustomRouter interface {
-	Route(ctx context.Context, msg message.Message, candidates []CandidateStatus) ([]message.Address, error)
+	Route(ctx context.Context, msg message.Message, candidates []CandidateStatus) ([]address.Address, error)
 }
 
 // NewBaseActorRouter 创建新的基础actor路由器
@@ -118,7 +119,7 @@ func NewBaseActorRouter(strategy RoutingStrategy, grouping GroupingStrategy) *Ba
 		strategy:       strategy,
 		grouping:       grouping,
 		rrIndex:        0,
-		stickySessions: make(map[string]message.Address),
+		stickySessions: make(map[string]address.Address),
 	}
 }
 
@@ -133,11 +134,11 @@ func NewBaseActorRouterWithCustom(customRouter CustomRouter) *BaseActorRouter {
 }
 
 // Route 路由消息
-func (r *BaseActorRouter) Route(ctx context.Context, msg message.Message, candidates []message.Address) ([]message.Address, error) {
+func (r *BaseActorRouter) Route(ctx context.Context, msg message.Message, candidates []address.Address) ([]address.Address, error) {
 	if len(candidates) == 0 {
 		// 如果没有提供候选列表，使用内部管理的候选
 		r.candidatesLock.RLock()
-		internalCandidates := make([]message.Address, 0, len(r.candidates))
+		internalCandidates := make([]address.Address, 0, len(r.candidates))
 		for _, status := range r.candidates {
 			if status.Healthy {
 				internalCandidates = append(internalCandidates, status.Address)
@@ -159,7 +160,7 @@ func (r *BaseActorRouter) Route(ctx context.Context, msg message.Message, candid
 }
 
 // AddCandidate 添加候选actor
-func (r *BaseActorRouter) AddCandidate(address message.Address) error {
+func (r *BaseActorRouter) AddCandidate(address address.Address) error {
 	if address == nil {
 		return errors.New("AddCandidate address cannot be nil")
 	}
@@ -185,7 +186,7 @@ func (r *BaseActorRouter) AddCandidate(address message.Address) error {
 }
 
 // RemoveCandidate 移除候选actor
-func (r *BaseActorRouter) RemoveCandidate(address message.Address) error {
+func (r *BaseActorRouter) RemoveCandidate(address address.Address) error {
 	if address == nil {
 		return errors.New("RemoveCandidate address cannot be nil")
 	}
@@ -214,11 +215,11 @@ func (r *BaseActorRouter) RemoveCandidate(address message.Address) error {
 }
 
 // GetCandidates 获取所有候选actor
-func (r *BaseActorRouter) GetCandidates() []message.Address {
+func (r *BaseActorRouter) GetCandidates() []address.Address {
 	r.candidatesLock.RLock()
 	defer r.candidatesLock.RUnlock()
 
-	candidates := make([]message.Address, 0, len(r.candidates))
+	candidates := make([]address.Address, 0, len(r.candidates))
 	for _, status := range r.candidates {
 		candidates = append(candidates, status.Address)
 	}
@@ -227,7 +228,7 @@ func (r *BaseActorRouter) GetCandidates() []message.Address {
 }
 
 // UpdateCandidateStatus 更新候选actor状态
-func (r *BaseActorRouter) UpdateCandidateStatus(address message.Address, status CandidateStatus) error {
+func (r *BaseActorRouter) UpdateCandidateStatus(address address.Address, status CandidateStatus) error {
 	if address == nil {
 		return errors.New("address cannot be nil")
 	}
@@ -249,7 +250,7 @@ func (r *BaseActorRouter) UpdateCandidateStatus(address message.Address, status 
 }
 
 // GetCandidateStatus 获取候选actor状态
-func (r *BaseActorRouter) GetCandidateStatus(address message.Address) (CandidateStatus, error) {
+func (r *BaseActorRouter) GetCandidateStatus(address address.Address) (CandidateStatus, error) {
 	if address == nil {
 		return CandidateStatus{}, errors.New("address cannot be nil")
 	}
@@ -268,7 +269,7 @@ func (r *BaseActorRouter) GetCandidateStatus(address message.Address) (Candidate
 }
 
 // applyGrouping 应用分组策略
-func (r *BaseActorRouter) applyGrouping(msg message.Message, candidates []message.Address) []message.Address {
+func (r *BaseActorRouter) applyGrouping(msg message.Message, candidates []address.Address) []address.Address {
 	if len(candidates) <= 1 {
 		return candidates
 	}
@@ -288,7 +289,7 @@ func (r *BaseActorRouter) applyGrouping(msg message.Message, candidates []messag
 }
 
 // applyRoutingStrategy 应用路由策略
-func (r *BaseActorRouter) applyRoutingStrategy(ctx context.Context, msg message.Message, candidates []message.Address) ([]message.Address, error) {
+func (r *BaseActorRouter) applyRoutingStrategy(ctx context.Context, msg message.Message, candidates []address.Address) ([]address.Address, error) {
 	if r.strategy == StrategyCustom && r.customRouter != nil {
 		// 获取候选状态
 		r.candidatesLock.RLock()
@@ -325,9 +326,9 @@ func (r *BaseActorRouter) applyRoutingStrategy(ctx context.Context, msg message.
 }
 
 // applyRoundRobin 应用轮询策略
-func (r *BaseActorRouter) applyRoundRobin(candidates []message.Address) []message.Address {
+func (r *BaseActorRouter) applyRoundRobin(candidates []address.Address) []address.Address {
 	if len(candidates) == 0 {
-		return []message.Address{}
+		return []address.Address{}
 	}
 
 	r.rrLock.Lock()
@@ -336,23 +337,23 @@ func (r *BaseActorRouter) applyRoundRobin(candidates []message.Address) []messag
 	r.rrIndex = (index + 1) % len(candidates)
 	r.rrLock.Unlock()
 
-	return []message.Address{target}
+	return []address.Address{target}
 }
 
 // applyRandom 应用随机策略
-func (r *BaseActorRouter) applyRandom(candidates []message.Address) []message.Address {
+func (r *BaseActorRouter) applyRandom(candidates []address.Address) []address.Address {
 	if len(candidates) == 0 {
-		return []message.Address{}
+		return []address.Address{}
 	}
 
 	index := rand.Intn(len(candidates))
-	return []message.Address{candidates[index]}
+	return []address.Address{candidates[index]}
 }
 
 // applyHash 应用哈希策略
-func (r *BaseActorRouter) applyHash(msg message.Message, candidates []message.Address) []message.Address {
+func (r *BaseActorRouter) applyHash(msg message.Message, candidates []address.Address) []address.Address {
 	if len(candidates) == 0 {
-		return []message.Address{}
+		return []address.Address{}
 	}
 
 	// 使用消息ID进行哈希
@@ -361,13 +362,13 @@ func (r *BaseActorRouter) applyHash(msg message.Message, candidates []message.Ad
 	hash := h.Sum32()
 	index := int(hash % uint32(len(candidates)))
 
-	return []message.Address{candidates[index]}
+	return []address.Address{candidates[index]}
 }
 
 // applyLeastLoaded 应用最小负载策略
-func (r *BaseActorRouter) applyLeastLoaded(candidates []message.Address) []message.Address {
+func (r *BaseActorRouter) applyLeastLoaded(candidates []address.Address) []address.Address {
 	if len(candidates) == 0 {
-		return []message.Address{}
+		return []address.Address{}
 	}
 
 	r.candidatesLock.RLock()
@@ -375,7 +376,7 @@ func (r *BaseActorRouter) applyLeastLoaded(candidates []message.Address) []messa
 
 	// 找到负载最小的候选
 	var minLoad = 101 // 初始值大于最大负载
-	var selected message.Address
+	var selected address.Address
 
 	for _, addr := range candidates {
 		if status, exists := r.candidates[addr.String()]; exists && status.Healthy {
@@ -388,16 +389,16 @@ func (r *BaseActorRouter) applyLeastLoaded(candidates []message.Address) []messa
 
 	if selected == nil {
 		// 如果没有找到健康的候选，返回第一个
-		return []message.Address{candidates[0]}
+		return []address.Address{candidates[0]}
 	}
 
-	return []message.Address{selected}
+	return []address.Address{selected}
 }
 
 // applySticky 应用粘性会话策略
-func (r *BaseActorRouter) applySticky(msg message.Message, candidates []message.Address) []message.Address {
+func (r *BaseActorRouter) applySticky(msg message.Message, candidates []address.Address) []address.Address {
 	if len(candidates) == 0 {
-		return []message.Address{}
+		return []address.Address{}
 	}
 
 	// 使用发送者ID作为粘性键
@@ -423,7 +424,7 @@ func (r *BaseActorRouter) applySticky(msg message.Message, candidates []message.
 				r.candidatesLock.RUnlock()
 
 				if statusExists && status.Healthy {
-					return []message.Address{addr}
+					return []address.Address{addr}
 				}
 				// 如果不健康，继续选择新的
 				break
@@ -439,13 +440,13 @@ func (r *BaseActorRouter) applySticky(msg message.Message, candidates []message.
 	r.stickySessions[senderStr] = newAddr
 	r.stickyLock.Unlock()
 
-	return []message.Address{newAddr}
+	return []address.Address{newAddr}
 }
 
 // applyLocationAware 应用位置感知策略（简化实现）
-func (r *BaseActorRouter) applyLocationAware(msg message.Message, candidates []message.Address) []message.Address {
+func (r *BaseActorRouter) applyLocationAware(msg message.Message, candidates []address.Address) []address.Address {
 	if len(candidates) == 0 {
-		return []message.Address{}
+		return []address.Address{}
 	}
 
 	// 简化实现：优先选择与发送者在同一区域的候选
@@ -460,27 +461,27 @@ func (r *BaseActorRouter) applyLocationAware(msg message.Message, candidates []m
 }
 
 // groupByMessageType 按消息类型分组
-func (r *BaseActorRouter) groupByMessageType(msg message.Message, candidates []message.Address) []message.Address {
+func (r *BaseActorRouter) groupByMessageType(msg message.Message, candidates []address.Address) []address.Address {
 	// 简化实现：所有候选都可以处理所有消息类型
 	// 实际应用中可以根据actor能力进行过滤
 	return candidates
 }
 
 // groupBySender 按发送者分组
-func (r *BaseActorRouter) groupBySender(msg message.Message, candidates []message.Address) []message.Address {
+func (r *BaseActorRouter) groupBySender(msg message.Message, candidates []address.Address) []address.Address {
 	// 简化实现：所有候选都可以处理所有发送者
 	return candidates
 }
 
 // groupByKey 按自定义键分组
-func (r *BaseActorRouter) groupByKey(msg message.Message, candidates []message.Address) []message.Address {
+func (r *BaseActorRouter) groupByKey(msg message.Message, candidates []address.Address) []address.Address {
 	// 简化实现：需要消息提供分组键
 	// 当前返回所有候选
 	return candidates
 }
 
 // groupByHash 按哈希值分组
-func (r *BaseActorRouter) groupByHash(msg message.Message, candidates []message.Address) []message.Address {
+func (r *BaseActorRouter) groupByHash(msg message.Message, candidates []address.Address) []address.Address {
 	if len(candidates) <= 1 {
 		return candidates
 	}
@@ -492,7 +493,7 @@ func (r *BaseActorRouter) groupByHash(msg message.Message, candidates []message.
 
 	// 选择哈希值对应的候选
 	index := int(hash % uint32(len(candidates)))
-	return []message.Address{candidates[index]}
+	return []address.Address{candidates[index]}
 }
 
 // RouterManager actor路由器管理器

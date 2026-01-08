@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/GooLuck/GoServer/framework/actor/address"
 	"github.com/GooLuck/GoServer/framework/actor/message"
 )
 
@@ -29,7 +30,7 @@ func TestMailboxManagerCreateAndGet(t *testing.T) {
 	manager := NewDefaultMailboxManager()
 
 	// 创建地址
-	addr, err := message.NewLocalAddress("local", "/test/actor")
+	addr, err := address.NewLocalAddress("local", "/test/actor")
 	if err != nil {
 		t.Fatalf("failed to create address: %v", err)
 	}
@@ -73,7 +74,7 @@ func TestMailboxManagerCreateAndGet(t *testing.T) {
 func TestMailboxManagerDuplicateCreate(t *testing.T) {
 	manager := NewDefaultMailboxManager()
 
-	addr, err := message.NewLocalAddress("local", "/test/actor")
+	addr, err := address.NewLocalAddress("local", "/test/actor")
 	if err != nil {
 		t.Fatalf("failed to create address: %v", err)
 	}
@@ -98,7 +99,7 @@ func TestMailboxManagerDuplicateCreate(t *testing.T) {
 func TestMailboxManagerGetOrCreate(t *testing.T) {
 	manager := NewDefaultMailboxManager()
 
-	addr, err := message.NewLocalAddress("local", "/test/actor")
+	addr, err := address.NewLocalAddress("local", "/test/actor")
 	if err != nil {
 		t.Fatalf("failed to create address: %v", err)
 	}
@@ -137,7 +138,7 @@ func TestMailboxManagerGetOrCreate(t *testing.T) {
 func TestMailboxManagerRemove(t *testing.T) {
 	manager := NewDefaultMailboxManager()
 
-	addr, err := message.NewLocalAddress("local", "/test/actor")
+	addr, err := address.NewLocalAddress("local", "/test/actor")
 	if err != nil {
 		t.Fatalf("failed to create address: %v", err)
 	}
@@ -185,9 +186,9 @@ func TestMailboxManagerListMailboxes(t *testing.T) {
 	manager := NewDefaultMailboxManager()
 
 	// 创建多个邮箱
-	addresses := make([]message.Address, 3)
+	addresses := make([]address.Address, 3)
 	for i := 0; i < 3; i++ {
-		addr, err := message.NewLocalAddress("local", "/test/actor"+string(rune('A'+i)))
+		addr, err := address.NewLocalAddress("local", "/test/actor"+string(rune('A'+i)))
 		if err != nil {
 			t.Fatalf("failed to create address %d: %v", i, err)
 		}
@@ -225,7 +226,7 @@ func TestMailboxManagerClose(t *testing.T) {
 
 	// 创建几个邮箱
 	for i := 0; i < 3; i++ {
-		addr, err := message.NewLocalAddress("local", "/test/actor"+string(rune('A'+i)))
+		addr, err := address.NewLocalAddress("local", "/test/actor"+string(rune('A'+i)))
 		if err != nil {
 			t.Fatalf("failed to create address %d: %v", i, err)
 		}
@@ -247,7 +248,7 @@ func TestMailboxManagerClose(t *testing.T) {
 	}
 
 	// 关闭后创建邮箱应该失败
-	addr, _ := message.NewLocalAddress("local", "/new/actor")
+	addr, _ := address.NewLocalAddress("local", "/new/actor")
 	config := Config{Capacity: 100}
 	_, err = manager.CreateMailbox(addr, config)
 	if err == nil {
@@ -255,7 +256,7 @@ func TestMailboxManagerClose(t *testing.T) {
 	}
 
 	// 关闭后获取邮箱应该失败
-	existingAddr, _ := message.NewLocalAddress("local", "/test/actorA")
+	existingAddr, _ := address.NewLocalAddress("local", "/test/actorA")
 	_, err = manager.GetMailbox(existingAddr)
 	if err == nil {
 		t.Error("getting mailbox after close should fail")
@@ -283,8 +284,8 @@ func TestDeliveryService(t *testing.T) {
 	msg := message.NewBaseMessage("test.delivery", "test data")
 
 	// 设置发送者和接收者
-	sender, _ := message.NewLocalAddress("local", "/sender")
-	receiver, _ := message.NewLocalAddress("local", "/receiver")
+	sender, _ := address.NewLocalAddress("local", "/sender")
+	receiver, _ := address.NewLocalAddress("local", "/receiver")
 	msg.SetSender(sender)
 	msg.SetReceiver(receiver)
 

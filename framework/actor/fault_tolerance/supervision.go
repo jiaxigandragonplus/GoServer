@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/GooLuck/GoServer/framework/actor"
-	"github.com/GooLuck/GoServer/framework/actor/message"
+	"github.com/GooLuck/GoServer/framework/actor/address"
 	"github.com/GooLuck/GoServer/framework/actor/monitor"
 )
 
@@ -31,7 +31,7 @@ type Supervisor interface {
 	// AddChild 添加子actor
 	AddChild(child actor.Actor) error
 	// RemoveChild 移除子actor
-	RemoveChild(address message.Address) error
+	RemoveChild(address address.Address) error
 	// Children 返回所有子actor
 	Children() []actor.Actor
 	// SetStrategy 设置监督策略
@@ -199,7 +199,7 @@ func (s *DefaultSupervisor) AddChild(child actor.Actor) error {
 }
 
 // RemoveChild 移除子actor
-func (s *DefaultSupervisor) RemoveChild(address message.Address) error {
+func (s *DefaultSupervisor) RemoveChild(address address.Address) error {
 	if address == nil {
 		return actor.ErrInvalidAddress
 	}

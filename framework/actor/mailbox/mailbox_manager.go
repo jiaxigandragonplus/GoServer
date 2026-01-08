@@ -7,23 +7,24 @@ import (
 	"sync"
 	"time"
 
+	"github.com/GooLuck/GoServer/framework/actor/address"
 	"github.com/GooLuck/GoServer/framework/actor/message"
 )
 
 // MailboxManager 邮箱管理器接口
 type MailboxManager interface {
 	// CreateMailbox 为指定地址创建邮箱
-	CreateMailbox(address message.Address, config Config) (Mailbox, error)
+	CreateMailbox(address address.Address, config Config) (Mailbox, error)
 	// GetMailbox 获取指定地址的邮箱
-	GetMailbox(address message.Address) (Mailbox, error)
+	GetMailbox(address address.Address) (Mailbox, error)
 	// GetOrCreateMailbox 获取或创建邮箱
-	GetOrCreateMailbox(address message.Address, config Config) (Mailbox, error)
+	GetOrCreateMailbox(address address.Address, config Config) (Mailbox, error)
 	// RemoveMailbox 移除指定地址的邮箱
-	RemoveMailbox(address message.Address) error
+	RemoveMailbox(address address.Address) error
 	// HasMailbox 检查地址是否有邮箱
-	HasMailbox(address message.Address) bool
+	HasMailbox(address address.Address) bool
 	// ListMailboxes 列出所有邮箱地址
-	ListMailboxes() []message.Address
+	ListMailboxes() []address.Address
 	// Stats 返回管理器统计信息
 	Stats() ManagerStats
 	// Close 关闭所有邮箱
@@ -47,7 +48,7 @@ type ManagerStats struct {
 // DefaultMailboxManager 默认邮箱管理器实现
 type DefaultMailboxManager struct {
 	mailboxes map[string]Mailbox
-	addresses map[string]message.Address // 地址字符串到地址对象的映射
+	addresses map[string]address.Address // 地址字符串到地址对象的映射
 	configs   map[string]Config
 	stats     ManagerStats
 	mu        sync.RWMutex
@@ -58,7 +59,7 @@ type DefaultMailboxManager struct {
 func NewDefaultMailboxManager() *DefaultMailboxManager {
 	return &DefaultMailboxManager{
 		mailboxes: make(map[string]Mailbox),
-		addresses: make(map[string]message.Address),
+		addresses: make(map[string]address.Address),
 		configs:   make(map[string]Config),
 		stats: ManagerStats{
 			CreatedTime: time.Now(),
@@ -67,7 +68,7 @@ func NewDefaultMailboxManager() *DefaultMailboxManager {
 }
 
 // CreateMailbox 创建邮箱
-func (m *DefaultMailboxManager) CreateMailbox(address message.Address, config Config) (Mailbox, error) {
+func (m *DefaultMailboxManager) CreateMailbox(address address.Address, config Config) (Mailbox, error) {
 	if address == nil {
 		return nil, errors.New("address cannot be nil")
 	}
@@ -98,7 +99,7 @@ func (m *DefaultMailboxManager) CreateMailbox(address message.Address, config Co
 }
 
 // GetMailbox 获取邮箱
-func (m *DefaultMailboxManager) GetMailbox(address message.Address) (Mailbox, error) {
+func (m *DefaultMailboxManager) GetMailbox(address address.Address) (Mailbox, error) {
 	if address == nil {
 		return nil, errors.New("address cannot be nil")
 	}
@@ -121,7 +122,7 @@ func (m *DefaultMailboxManager) GetMailbox(address message.Address) (Mailbox, er
 }
 
 // GetOrCreateMailbox 获取或创建邮箱
-func (m *DefaultMailboxManager) GetOrCreateMailbox(address message.Address, config Config) (Mailbox, error) {
+func (m *DefaultMailboxManager) GetOrCreateMailbox(address address.Address, config Config) (Mailbox, error) {
 	if address == nil {
 		return nil, errors.New("address cannot be nil")
 	}
@@ -154,7 +155,7 @@ func (m *DefaultMailboxManager) GetOrCreateMailbox(address message.Address, conf
 }
 
 // RemoveMailbox 移除邮箱
-func (m *DefaultMailboxManager) RemoveMailbox(address message.Address) error {
+func (m *DefaultMailboxManager) RemoveMailbox(address address.Address) error {
 	if address == nil {
 		return errors.New("address cannot be nil")
 	}
@@ -190,7 +191,7 @@ func (m *DefaultMailboxManager) RemoveMailbox(address message.Address) error {
 }
 
 // HasMailbox 检查是否有邮箱
-func (m *DefaultMailboxManager) HasMailbox(address message.Address) bool {
+func (m *DefaultMailboxManager) HasMailbox(address address.Address) bool {
 	if address == nil {
 		return false
 	}
@@ -209,15 +210,15 @@ func (m *DefaultMailboxManager) HasMailbox(address message.Address) bool {
 }
 
 // ListMailboxes 列出所有邮箱地址
-func (m *DefaultMailboxManager) ListMailboxes() []message.Address {
+func (m *DefaultMailboxManager) ListMailboxes() []address.Address {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	if m.closed {
-		return []message.Address{}
+		return []address.Address{}
 	}
 
-	addresses := make([]message.Address, 0, len(m.addresses))
+	addresses := make([]address.Address, 0, len(m.addresses))
 	for _, addr := range m.addresses {
 		addresses = append(addresses, addr)
 	}
@@ -264,7 +265,7 @@ func (m *DefaultMailboxManager) Close() error {
 
 	// 清空映射
 	m.mailboxes = make(map[string]Mailbox)
-	m.addresses = make(map[string]message.Address)
+	m.addresses = make(map[string]address.Address)
 	m.configs = make(map[string]Config)
 	m.stats.ActiveMailboxes = 0
 	m.stats.LastActivityTime = time.Now()

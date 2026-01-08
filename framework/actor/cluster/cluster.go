@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/GooLuck/GoServer/framework/actor"
+	"github.com/GooLuck/GoServer/framework/actor/address"
 	"github.com/GooLuck/GoServer/framework/actor/message"
 	"github.com/GooLuck/GoServer/framework/logger"
 )
@@ -136,15 +137,15 @@ type Cluster interface {
 	// Leader 获取领导者节点
 	Leader() (*NodeInfo, error)
 	// Send 发送消息到远程actor
-	Send(ctx context.Context, receiver message.Address, msg message.Message) error
+	Send(ctx context.Context, receiver address.Address, msg message.Message) error
 	// Broadcast 广播消息到所有节点
 	Broadcast(ctx context.Context, msg message.Message) error
 	// RegisterActor 注册actor到集群
 	RegisterActor(actor actor.Actor) error
 	// UnregisterActor 从集群注销actor
-	UnregisterActor(address message.Address) error
+	UnregisterActor(address address.Address) error
 	// ResolveAddress 解析地址到节点
-	ResolveAddress(address message.Address) (*NodeInfo, error)
+	ResolveAddress(address address.Address) (*NodeInfo, error)
 }
 
 // ClusterManager 集群管理器
@@ -417,7 +418,7 @@ func (cm *ClusterManager) Leader() (*NodeInfo, error) {
 }
 
 // Send 发送消息到远程actor
-func (cm *ClusterManager) Send(ctx context.Context, receiver message.Address, msg message.Message) error {
+func (cm *ClusterManager) Send(ctx context.Context, receiver address.Address, msg message.Message) error {
 	if receiver == nil {
 		return fmt.Errorf("receiver address cannot be nil")
 	}
@@ -450,7 +451,7 @@ func (cm *ClusterManager) Broadcast(ctx context.Context, msg message.Message) er
 	var firstErr error
 	for _, node := range nodes {
 		// 创建远程地址
-		addr, err := message.ParseAddress(fmt.Sprintf("tcp://%s/", node.Address))
+		addr, err := address.ParseAddress(fmt.Sprintf("tcp://%s/", node.Address))
 		if err != nil {
 			if firstErr == nil {
 				firstErr = err
@@ -487,7 +488,7 @@ func (cm *ClusterManager) RegisterActor(actor actor.Actor) error {
 }
 
 // UnregisterActor 从集群注销actor
-func (cm *ClusterManager) UnregisterActor(address message.Address) error {
+func (cm *ClusterManager) UnregisterActor(address address.Address) error {
 	if address == nil {
 		return fmt.Errorf("address cannot be nil")
 	}
@@ -504,7 +505,7 @@ func (cm *ClusterManager) UnregisterActor(address message.Address) error {
 }
 
 // ResolveAddress 解析地址到节点
-func (cm *ClusterManager) ResolveAddress(address message.Address) (*NodeInfo, error) {
+func (cm *ClusterManager) ResolveAddress(address address.Address) (*NodeInfo, error) {
 	if address == nil {
 		return nil, fmt.Errorf("address cannot be nil")
 	}
@@ -664,7 +665,7 @@ func (cm *ClusterManager) updateNodes(nodes []*NodeInfo) {
 }
 
 // sendLocal 发送本地消息
-func (cm *ClusterManager) sendLocal(ctx context.Context, receiver message.Address, msg message.Message) error {
+func (cm *ClusterManager) sendLocal(ctx context.Context, receiver address.Address, msg message.Message) error {
 	// 获取actor
 	actor, err := cm.actorMgr.Get(receiver)
 	if err != nil {
@@ -679,7 +680,7 @@ func (cm *ClusterManager) sendLocal(ctx context.Context, receiver message.Addres
 }
 
 // sendRemote 发送远程消息
-func (cm *ClusterManager) sendRemote(ctx context.Context, receiver message.Address, msg message.Message) error {
+func (cm *ClusterManager) sendRemote(ctx context.Context, receiver address.Address, msg message.Message) error {
 	// 解析目标节点
 	node, err := cm.ResolveAddress(receiver)
 	if err != nil {

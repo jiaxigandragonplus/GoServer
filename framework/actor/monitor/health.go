@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/GooLuck/GoServer/framework/actor"
-	"github.com/GooLuck/GoServer/framework/actor/message"
+	"github.com/GooLuck/GoServer/framework/actor/address"
 )
 
 // HealthCheckManager 健康检查管理器
@@ -422,17 +422,17 @@ func (m *HealthCheckManager) performAllHealthChecks() {
 	// 获取actor管理器
 	actorMgr := actor.GetDefaultActorManager()
 
-	for _, address := range addresses {
+	for _, addr := range addresses {
 		// 获取actor
-		addr, err := message.ParseAddress(address)
+		addrObj, err := address.ParseAddress(addr)
 		if err != nil {
 			continue
 		}
 
-		actor, err := actorMgr.Get(addr)
+		actor, err := actorMgr.Get(addrObj)
 		if err != nil {
 			// actor不存在，从健康检查中移除
-			m.UnregisterActor(address)
+			m.UnregisterActor(addr)
 			continue
 		}
 
@@ -448,19 +448,19 @@ func (m *HealthCheckManager) performAllHealthChecks() {
 
 		// 更新结果
 		m.mu.Lock()
-		oldResult, exists := m.results[address]
-		m.results[address] = result
+		oldResult, exists := m.results[addr]
+		m.results[addr] = result
 		m.mu.Unlock()
 
 		// 触发事件
 		if exists && oldResult.HealthStatus != result.HealthStatus {
-			m.notifyHealthChanged(address, oldResult.HealthStatus, result.HealthStatus, result)
+			m.notifyHealthChanged(addr, oldResult.HealthStatus, result.HealthStatus, result)
 		}
 
 		if result.Error != "" {
-			m.notifyHealthCheckFailed(address, result)
+			m.notifyHealthCheckFailed(addr, result)
 		} else if oldResult.Error != "" && result.Error == "" {
-			m.notifyHealthCheckRecovered(address, result)
+			m.notifyHealthCheckRecovered(addr, result)
 		}
 	}
 }

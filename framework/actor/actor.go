@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/GooLuck/GoServer/framework/actor/address"
 	"github.com/GooLuck/GoServer/framework/actor/mailbox"
 	"github.com/GooLuck/GoServer/framework/actor/message"
 )
@@ -72,7 +73,7 @@ const (
 // Actor 接口定义了一个actor的基本行为
 type Actor interface {
 	// Address 返回actor的地址
-	Address() message.Address
+	Address() address.Address
 	// Mailbox 返回actor的邮箱
 	Mailbox() mailbox.Mailbox
 	// Start 启动actor的消息处理循环
@@ -105,7 +106,7 @@ type Actor interface {
 
 // BaseActor 基础actor实现
 type BaseActor struct {
-	address    message.Address
+	address    address.Address
 	mailbox    mailbox.Mailbox
 	mailboxMgr mailbox.MailboxManager
 	running    bool
@@ -121,12 +122,12 @@ type BaseActor struct {
 }
 
 // NewBaseActor 创建新的基础actor
-func NewBaseActor(address message.Address, mailboxMgr mailbox.MailboxManager) (*BaseActor, error) {
+func NewBaseActor(address address.Address, mailboxMgr mailbox.MailboxManager) (*BaseActor, error) {
 	return NewBaseActorWithParent(address, mailboxMgr, nil)
 }
 
 // NewBaseActorWithParent 创建新的基础actor（指定父actor）
-func NewBaseActorWithParent(address message.Address, mailboxMgr mailbox.MailboxManager, parent Actor) (*BaseActor, error) {
+func NewBaseActorWithParent(address address.Address, mailboxMgr mailbox.MailboxManager, parent Actor) (*BaseActor, error) {
 	if address == nil {
 		return nil, ErrInvalidAddress
 	}
@@ -158,7 +159,7 @@ func NewBaseActorWithParent(address message.Address, mailboxMgr mailbox.MailboxM
 }
 
 // Address 返回actor地址
-func (a *BaseActor) Address() message.Address {
+func (a *BaseActor) Address() address.Address {
 	return a.address
 }
 
@@ -415,7 +416,7 @@ func (a *BaseActor) HandleMessage(ctx context.Context, envelope *message.Envelop
 }
 
 // Send 发送消息到另一个actor
-func (a *BaseActor) Send(ctx context.Context, receiver message.Address, msg message.Message) error {
+func (a *BaseActor) Send(ctx context.Context, receiver address.Address, msg message.Message) error {
 	if receiver == nil {
 		return ErrInvalidAddress
 	}
@@ -491,7 +492,7 @@ func (m *ActorManager) Register(actor Actor) error {
 }
 
 // Get 获取actor
-func (m *ActorManager) Get(address message.Address) (Actor, error) {
+func (m *ActorManager) Get(address address.Address) (Actor, error) {
 	if address == nil {
 		return nil, ErrInvalidAddress
 	}
@@ -510,7 +511,7 @@ func (m *ActorManager) Get(address message.Address) (Actor, error) {
 }
 
 // Remove 移除actor
-func (m *ActorManager) Remove(address message.Address) error {
+func (m *ActorManager) Remove(address address.Address) error {
 	if address == nil {
 		return ErrInvalidAddress
 	}

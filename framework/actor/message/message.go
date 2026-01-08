@@ -3,6 +3,8 @@ package message
 import (
 	"context"
 	"time"
+
+	"github.com/GooLuck/GoServer/framework/actor/address"
 )
 
 // Message 消息接口
@@ -14,13 +16,13 @@ type Message interface {
 	// SetData 设置消息数据
 	SetData(data any)
 	// Sender 返回发送者地址
-	Sender() Address
+	Sender() address.Address
 	// SetSender 设置发送者地址
-	SetSender(sender Address)
+	SetSender(sender address.Address)
 	// Receiver 返回接收者地址
-	Receiver() Address
+	Receiver() address.Address
 	// SetReceiver 设置接收者地址
-	SetReceiver(receiver Address)
+	SetReceiver(receiver address.Address)
 	// Timestamp 返回消息时间戳
 	Timestamp() time.Time
 	// SetTimestamp 设置消息时间戳
@@ -45,26 +47,6 @@ type Message interface {
 	GetHeader(key string) string
 	// Clone 克隆消息
 	Clone() Message
-}
-
-// Address 地址接口，表示Actor地址
-type Address interface {
-	// String 返回地址字符串表示
-	String() string
-	// Protocol 返回地址协议
-	Protocol() string
-	// Host 返回主机地址
-	Host() string
-	// Port 返回端口
-	Port() string
-	// Path 返回路径
-	Path() string
-	// Equal 比较地址是否相等
-	Equal(other Address) bool
-	// IsLocal 是否是本地地址
-	IsLocal() bool
-	// IsRemote 是否是远程地址
-	IsRemote() bool
 }
 
 // Priority 消息优先级
@@ -159,8 +141,8 @@ func (e *Envelope) MarkAsDeadLetter(err error) {
 type BaseMessage struct {
 	msgType   string
 	data      any
-	sender    Address
-	receiver  Address
+	sender    address.Address
+	receiver  address.Address
 	timestamp time.Time
 	id        string
 	priority  Priority
@@ -193,19 +175,19 @@ func (m *BaseMessage) SetData(data any) {
 	m.data = data
 }
 
-func (m *BaseMessage) Sender() Address {
+func (m *BaseMessage) Sender() address.Address {
 	return m.sender
 }
 
-func (m *BaseMessage) SetSender(sender Address) {
+func (m *BaseMessage) SetSender(sender address.Address) {
 	m.sender = sender
 }
 
-func (m *BaseMessage) Receiver() Address {
+func (m *BaseMessage) Receiver() address.Address {
 	return m.receiver
 }
 
-func (m *BaseMessage) SetReceiver(receiver Address) {
+func (m *BaseMessage) SetReceiver(receiver address.Address) {
 	m.receiver = receiver
 }
 

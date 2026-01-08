@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"sync"
 	"time"
+
+	"github.com/GooLuck/GoServer/framework/actor/address"
 )
 
 // Serializer 序列化器接口
@@ -80,14 +82,14 @@ func (s *JSONSerializer) Deserialize(data []byte) (Message, error) {
 
 	// 设置地址
 	if serializable.Sender != "" {
-		sender, err := ParseAddress(serializable.Sender)
+		sender, err := address.ParseAddress(serializable.Sender)
 		if err == nil {
 			msg.SetSender(sender)
 		}
 	}
 
 	if serializable.Receiver != "" {
-		receiver, err := ParseAddress(serializable.Receiver)
+		receiver, err := address.ParseAddress(serializable.Receiver)
 		if err == nil {
 			msg.SetReceiver(receiver)
 		}
@@ -120,7 +122,7 @@ type serializableMessage struct {
 }
 
 // addressToString 地址转字符串
-func addressToString(addr Address) string {
+func addressToString(addr address.Address) string {
 	if addr == nil {
 		return ""
 	}

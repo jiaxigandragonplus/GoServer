@@ -1,4 +1,4 @@
-package message
+package address
 
 import (
 	"fmt"
@@ -6,6 +6,26 @@ import (
 	"strings"
 	"sync"
 )
+
+// Address 地址接口，表示Actor地址
+type Address interface {
+	// String 返回地址字符串表示
+	String() string
+	// Protocol 返回地址协议
+	Protocol() string
+	// Host 返回主机地址
+	Host() string
+	// Port 返回端口
+	Port() string
+	// Path 返回路径
+	Path() string
+	// Equal 比较地址是否相等
+	Equal(other Address) bool
+	// IsLocal 是否是本地地址
+	IsLocal() bool
+	// IsRemote 是否是远程地址
+	IsRemote() bool
+}
 
 // Protocol 支持的协议类型
 type Protocol string

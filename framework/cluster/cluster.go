@@ -604,7 +604,7 @@ func (cm *ClusterManager) sendHeartbeat() {
 
 // broadcastHeartbeat 广播心跳
 func (cm *ClusterManager) broadcastHeartbeat() {
-	// 在实际实现中，这里应该发送心跳消息给所有跟随者
+	// todo 在实际实现中，这里应该发送心跳消息给所有跟随者
 	cm.logger.Debug("Broadcasting heartbeat", logger.String("node_id", cm.self.ID))
 }
 
@@ -722,18 +722,18 @@ func randomString(length int) string {
 }
 
 var (
-	defaultClusterManager     *ClusterManager
-	defaultClusterManagerOnce sync.Once
+	clusterManager     *ClusterManager
+	clusterManagerOnce sync.Once
 )
 
-func GetDefaultClusterManager() *ClusterManager {
-	defaultClusterManagerOnce.Do(func() {
+func GetClusterManager() *ClusterManager {
+	clusterManagerOnce.Do(func() {
 		config := DefaultConfig()
 		config.NodeName = "test-node"
 		config.Host = "localhost"
 		config.Port = 9090
 
-		defaultClusterManager, _ = NewClusterManager(config)
+		clusterManager, _ = NewClusterManager(config)
 	})
-	return defaultClusterManager
+	return clusterManager
 }

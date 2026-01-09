@@ -20,8 +20,8 @@ func initLogger() {
 	logger.Debug("this is debug log")
 }
 
-type ClusterConfig struct {
-	ClusterName string `json:"clusterName"`
+type ServerConfig struct {
+	NodeName string `json:"nodeName"`
 }
 
 func initConfig() {
@@ -30,7 +30,7 @@ func initConfig() {
 		panic(err)
 	}
 
-	clusterConfig := new(ClusterConfig)
+	clusterConfig := new(ServerConfig)
 	err = v.Unmarshal(clusterConfig)
 	if err != nil {
 		panic(err)

@@ -34,28 +34,105 @@ type WebSocketConn struct {
 	handshaked bool // 是否已完成握手
 	buffer     []byte
 	bufferSize int
-	mutex      sync.Mutex
-	// 回调函数
-	onMessage func([]byte)
-	onClose   func()
-	onError   func(error)
+	mutex      sync.Mutex // 串行化对底层连接的写操作
+
+	// 分片重组状态
+	fragmenting    bool
+	fragmentOpcode byte
+	fragmentBuf    []byte
 }
+
+// reassemble 处理分片帧（FIN / Continuation），把分片消息重组为完整消息。
+// 返回 done=true 时，finalOpcode/finalPayload 即为一条完整消息（或一个控制帧）。
+// 控制帧 (Ping/Pong/Close) 不参与分片，直接原样返回。
+func (wsConn *WebSocketConn) reassemble(fin bool, opcode byte, payload []byte) (done bool, finalOpcode byte, finalPayload []byte, err error) {
+	switch opcode {
+	case OpCodeContinuation:
+		if !wsConn.fragmenting {
+			return false, 0, nil, fmt.Errorf("unexpected continuation frame")
+		}
+		wsConn.fragmentBuf = append(wsConn.fragmentBuf, payload...)
+		if len(wsConn.fragmentBuf) > MaxFrameSize {
+			wsConn.resetFragment()
+			return false, 0, nil, fmt.Errorf("fragmented message exceeds max size")
+		}
+		if !fin {
+			return false, 0, nil, nil
+		}
+		finalOpcode = wsConn.fragmentOpcode
+		finalPayload = wsConn.fragmentBuf
+		wsConn.resetFragment()
+		return true, finalOpcode, finalPayload, nil
+
+	case OpCodeText, OpCodeBinary:
+		if wsConn.fragmenting {
+			return false, 0, nil, fmt.Errorf("expected continuation frame, got opcode %d", opcode)
+		}
+		if !fin {
+			// 分片消息的第一帧，开始累积
+			wsConn.fragmenting = true
+			wsConn.fragmentOpcode = opcode
+			wsConn.fragmentBuf = append([]byte(nil), payload...)
+			return false, 0, nil, nil
+		}
+		return true, opcode, payload, nil
+
+	default:
+		// 控制帧：Ping/Pong/Close
+		return true, opcode, payload, nil
+	}
+}
+
+func (wsConn *WebSocketConn) resetFragment() {
+	wsConn.fragmenting = false
+	wsConn.fragmentOpcode = 0
+	wsConn.fragmentBuf = nil
+}
+
+// send 线程安全地向底层连接写入一帧。服务端帧不掩码，客户端帧掩码。
+func (wsConn *WebSocketConn) send(opcode byte, payload []byte) error {
+	frame := buildFrame(opcode, payload, !wsConn.isServer)
+
+	wsConn.mutex.Lock()
+	defer wsConn.mutex.Unlock()
+
+	switch c := wsConn.conn.(type) {
+	case gnet.Conn:
+		_, err := c.Write(frame)
+		return err
+	case net.Conn:
+		_, err := c.Write(frame)
+		return err
+	default:
+		return fmt.Errorf("unknown connection type: %T", wsConn.conn)
+	}
+}
+
+// SendText 发送文本消息
+func (wsConn *WebSocketConn) SendText(text []byte) error { return wsConn.send(OpCodeText, text) }
+
+// SendBinary 发送二进制消息
+func (wsConn *WebSocketConn) SendBinary(data []byte) error { return wsConn.send(OpCodeBinary, data) }
 
 // WebSocketServer 实现 gNet.EventHandler
 type WebSocketServer struct {
-	addr     string
-	handlers map[string]WebSocketHandlerFunc
+	addr           string
+	messageHandler WebSocketHandlerFunc
 }
 
-// WebSocketHandlerFunc 定义 WebSocket 处理函数类型
+// WebSocketHandlerFunc 定义 WebSocket 消息处理函数类型
 type WebSocketHandlerFunc func(*WebSocketConn, []byte)
 
 // NewWebSocketServer 创建新的 WebSocket 服务器
 func NewWebSocketServer(addr string) *WebSocketServer {
 	return &WebSocketServer{
-		addr:     addr,
-		handlers: make(map[string]WebSocketHandlerFunc),
+		addr: addr,
 	}
+}
+
+// OnMessage 注册消息处理函数。未注册时，服务端默认回显 (echo) 收到的消息。
+func (ws *WebSocketServer) OnMessage(handler WebSocketHandlerFunc) {
+	ws.messageHandler = handler
 }
 
 // OnBoot 实现 gNet.EventHandler 接口
@@ -231,154 +308,43 @@ func generateAcceptKey(key string) string {
 	return base64.StdEncoding.EncodeToString(h.Sum(nil))
 }
 
-// parseFrames 解析 WebSocket 帧
+// parseFrames 解析 WebSocket 帧（委托给包级实现，便于服务端/客户端共用）
 func (ws *WebSocketServer) parseFrames(data []byte, wsConn *WebSocketConn) ([][]byte, error) {
-	var frames [][]byte
-	buf := data
-
-	for len(buf) > 0 {
-		if len(buf) < 2 {
-			// 缓冲区不足，保存剩余数据
-			wsConn.buffer = make([]byte, len(buf))
-			copy(wsConn.buffer, buf)
-			wsConn.bufferSize = len(buf)
-			break
-		}
-
-		// 解析帧头
-		//fin := (buf[0] & 0x80) != 0
-		//opcode := buf[0] & 0x0F
-		masked := (buf[1] & 0x80) != 0
-		payloadLen := int(buf[1] & 0x7F)
-
-		// 计算头部长度
-		headerLen := 2
-		if masked {
-			headerLen += 4 // mask key 长度
-		}
-
-		// 处理扩展长度字段
-		if payloadLen == 126 {
-			if len(buf) < headerLen+2 {
-				return nil, fmt.Errorf("insufficient data for extended length")
-			}
-			payloadLen = int(buf[2])<<8 | int(buf[3])
-			headerLen += 2
-		} else if payloadLen == 127 {
-			if len(buf) < headerLen+8 {
-				return nil, fmt.Errorf("insufficient data for extended length")
-			}
-			payloadLen = int(buf[2])<<56 | int(buf[3])<<48 | int(buf[4])<<40 | int(buf[5])<<32 |
-				int(buf[6])<<24 | int(buf[7])<<16 | int(buf[8])<<8 | int(buf[9])
-			headerLen += 8
-		}
-
-		totalFrameLen := headerLen + payloadLen
-
-		if len(buf) < totalFrameLen {
-			// 数据不完整，保存到缓冲区
-			wsConn.buffer = make([]byte, len(buf))
-			copy(wsConn.buffer, buf)
-			wsConn.bufferSize = len(buf)
-			break
-		}
-
-		// 提取帧数据
-		frame := buf[:totalFrameLen]
-		frames = append(frames, frame)
-
-		// 更新缓冲区
-		buf = buf[totalFrameLen:]
-	}
-
-	// 如果还有缓冲的数据，追加到现有缓冲区
-	if wsConn.bufferSize > 0 && len(buf) > 0 {
-		newBuf := make([]byte, wsConn.bufferSize+len(buf))
-		copy(newBuf, wsConn.buffer)
-		copy(newBuf[wsConn.bufferSize:], buf)
-		wsConn.bufferSize = len(newBuf)
-		wsConn.buffer = newBuf
-	}
-
-	return frames, nil
+	return parseFrames(data, wsConn)
 }
 
-// handleFrame 处理 WebSocket 帧
+// handleFrame 处理一个完整的 WebSocket 帧
 func (ws *WebSocketServer) handleFrame(wsConn *WebSocketConn, frame []byte) gnet.Action {
-	// 解析帧头
-	opcode := frame[0] & 0x0F
-	masked := (frame[1] & 0x80) != 0
-	payloadLen := int(frame[1] & 0x7F)
-
-	// 计算头部长度
-	headerLen := 2
-	maskKeyStart := 0
-	if masked {
-		maskKeyStart = headerLen
-		headerLen += 4 // mask key 长度
+	fin, opcode, payload, err := decodeFrame(frame)
+	if err != nil {
+		log.Printf("Decode frame error: %v", err)
+		return gnet.Close
 	}
 
-	// 处理扩展长度字段
-	if payloadLen == 126 {
-		payloadLen = int(frame[2])<<8 | int(frame[3])
-		headerLen += 2
-		maskKeyStart += 2
-	} else if payloadLen == 127 {
-		payloadLen = int(frame[2])<<56 | int(frame[3])<<48 | int(frame[4])<<40 | int(frame[5])<<32 |
-			int(frame[6])<<24 | int(frame[7])<<16 | int(frame[8])<<8 | int(frame[9])
-		headerLen += 8
-		maskKeyStart += 8
+	// 分片重组
+	done, op, msg, err := wsConn.reassemble(fin, opcode, payload)
+	if err != nil {
+		log.Printf("Reassemble error: %v", err)
+		return gnet.Close
+	}
+	if !done {
+		return gnet.None
 	}
 
-	// 提取有效载荷
-	payload := frame[headerLen : headerLen+payloadLen]
-
-	// 如果帧被掩码，则解码
-	if masked {
-		maskKey := frame[maskKeyStart : maskKeyStart+4]
-		for i := 0; i < len(payload); i++ {
-			payload[i] ^= maskKey[i%4]
-		}
-	}
-
-	// 处理不同操作码
-	switch opcode {
-	case OpCodeText:
-		log.Printf("Received text message: %s", string(payload))
-		// 回显消息
-		if conn, ok := wsConn.conn.(gnet.Conn); ok {
-			err := ws.sendText(conn, payload)
-			if err != nil {
-				log.Printf("Send text error: %v", err)
+	switch op {
+	case OpCodeText, OpCodeBinary:
+		if ws.messageHandler != nil {
+			ws.messageHandler(wsConn, msg)
+		} else {
+			// 默认行为：回显
+			if err := wsConn.send(op, msg); err != nil {
+				log.Printf("Echo error: %v", err)
 				return gnet.Close
 			}
-		} else {
-			log.Printf("Error: connection is not gnet.Conn")
-			return gnet.Close
-		}
-	case OpCodeBinary:
-		log.Printf("Received binary message, length: %d", len(payload))
-		// 回显二进制消息
-		if conn, ok := wsConn.conn.(gnet.Conn); ok {
-			err := ws.sendBinary(conn, payload)
-			if err != nil {
-				log.Printf("Send binary error: %v", err)
-				return gnet.Close
-			}
-		} else {
-			log.Printf("Error: connection is not gnet.Conn")
-			return gnet.Close
 		}
 	case OpCodePing:
-		log.Println("Received ping, sending pong")
-		if conn, ok := wsConn.conn.(gnet.Conn); ok {
-			err := ws.sendPong(conn, payload)
-			if err != nil {
-				log.Printf("Send pong error: %v", err)
-				return gnet.Close
-			}
-		} else {
-			log.Printf("Error: connection is not gnet.Conn")
+		if err := wsConn.send(OpCodePong, msg); err != nil {
+			log.Printf("Send pong error: %v", err)
 			return gnet.Close
 		}
 	case OpCodePong:
@@ -387,67 +353,10 @@ func (ws *WebSocketServer) handleFrame(wsConn *WebSocketConn, frame []byte) gnet
 		log.Println("Received close frame")
 		return gnet.Close
 	default:
-		log.Printf("Unknown opcode: %d", opcode)
+		log.Printf("Unknown opcode: %d", op)
 	}
 
 	return gnet.None
-}
-
-// sendFrame 发送 WebSocket 帧
-func (ws *WebSocketServer) sendFrame(c net.Conn, opcode byte, payload []byte) error {
-	// 构建帧头
-	var header []byte
-	payloadLen := len(payload)
-
-	if payloadLen <= 125 {
-		header = make([]byte, 2)
-		header[0] = 0x80 | opcode // FIN=1, opcode
-		header[1] = byte(payloadLen)
-	} else if payloadLen <= 65535 {
-		header = make([]byte, 4)
-		header[0] = 0x80 | opcode // FIN=1, opcode
-		header[1] = 126           // extended payload length
-		header[2] = byte(payloadLen >> 8)
-		header[3] = byte(payloadLen & 0xFF)
-	} else {
-		header = make([]byte, 10)
-		header[0] = 0x80 | opcode // FIN=1, opcode
-		header[1] = 127           // extended payload length
-		header[2] = byte((payloadLen >> 56) & 0xFF)
-		header[3] = byte((payloadLen >> 48) & 0xFF)
-		header[4] = byte((payloadLen >> 40) & 0xFF)
-		header[5] = byte((payloadLen >> 32) & 0xFF)
-		header[6] = byte((payloadLen >> 24) & 0xFF)
-		header[7] = byte((payloadLen >> 16) & 0xFF)
-		header[8] = byte((payloadLen >> 8) & 0xFF)
-		header[9] = byte(payloadLen & 0xFF)
-	}
-
-	// 合并头部和有效载荷
-	frame := append(header, payload...)
-
-	_, err := c.Write(frame)
-	return err
-}
-
-// sendText 发送文本消息
-func (ws *WebSocketServer) sendText(c net.Conn, text []byte) error {
-	return ws.sendFrame(c, OpCodeText, text)
-}
-
-// sendBinary 发送二进制消息
-func (ws *WebSocketServer) sendBinary(c net.Conn, data []byte) error {
-	return ws.sendFrame(c, OpCodeBinary, data)
-}
-
-// sendPing 发送 Ping 消息
-func (ws *WebSocketServer) sendPing(c net.Conn, data []byte) error {
-	return ws.sendFrame(c, OpCodePing, data)
-}
-
-// sendPong 发送 Pong 消息
-func (ws *WebSocketServer) sendPong(c net.Conn, data []byte) error {
-	return ws.sendFrame(c, OpCodePong, data)
 }
 
 // Start 启动 WebSocket 服务器
